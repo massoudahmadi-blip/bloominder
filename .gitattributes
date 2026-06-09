@@ -1,0 +1,9 @@
+# Keep LF on files that run on the Linux VPS (CRLF breaks shebangs / shell parsing).
+*.sh    text eol=lf
+*.sql   text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+Dockerfile text eol=lf
+
+# Let git handle the rest normally.
+* text=auto
