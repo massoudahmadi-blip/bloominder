@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: bloominder_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bloominder}
+      POSTGRES_USER: ${POSTGRES_USER:-bloominder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    # Bind to localhost only — never expose Postgres to the public internet.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./data:/data          # CSVs you download land here, visible inside the container
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    shm_size: "1gb"           # PostGIS likes shared memory for big sorts/joins
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=2GB"          # ~25% of the L+ 8 GB RAM
+      - "-c"
+      - "effective_cache_size=5GB"
+      - "-c"
+      - "maintenance_work_mem=512MB"  # speeds up index builds during load
+      - "-c"
+      - "work_mem=64MB"
+
+volumes:
+  pgdata:

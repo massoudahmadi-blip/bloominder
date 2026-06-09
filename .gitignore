@@ -1,0 +1,17 @@
+# dependencies & build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# secrets & env
+.env
+*.env
+!*.env.example
+
+# downloaded DVF data (large, regenerable)
+infra/data/
+
+# logs / os
+*.log
+.DS_Store
+Thumbs.db
