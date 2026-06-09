@@ -85,7 +85,7 @@ const dict = {
   },
 } as const;
 
-export type Dict = typeof dict.fr;
+export type Dict = Record<keyof typeof dict.fr, string>;
 
 const I18nContext = createContext<{ locale: Locale; t: Dict; setLocale: (l: Locale) => void }>({
   locale: 'fr',

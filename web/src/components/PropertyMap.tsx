@@ -2,7 +2,7 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Map, {
+import MapGL, {
   Source,
   Layer,
   Marker,
@@ -175,7 +175,7 @@ export function PropertyMap({
 
   return (
     <div className="relative h-full w-full">
-      <Map
+      <MapGL
         ref={mapRef}
         initialViewState={{ longitude: 4.7, latitude: 43.8, zoom: 9.5 }}
         mapStyle={MAP_STYLE}
@@ -245,7 +245,7 @@ export function PropertyMap({
         )}
 
         <Legend />
-      </Map>
+      </MapGL>
     </div>
   );
 }

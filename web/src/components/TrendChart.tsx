@@ -4,7 +4,9 @@ import { YearTrend } from '@/lib/types';
 
 // Lightweight hand-rolled SVG line chart (no chart dependency) — median €/m² per year.
 export function TrendChart({ data }: { data: YearTrend[] }) {
-  const points = data.filter((d) => d.median_eur_m2 != null) as Required<YearTrend>[];
+  const points = data.filter(
+    (d): d is YearTrend & { median_eur_m2: number } => d.median_eur_m2 != null,
+  );
   if (points.length < 2) {
     return <div className="py-6 text-center text-xs text-slate-400">—</div>;
   }
