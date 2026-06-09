@@ -1,0 +1,67 @@
+'use client';
+
+import { Filters as FiltersType, PropertyType } from '@/lib/types';
+import { useI18n } from '@/lib/i18n';
+
+const TYPE_OPTIONS: (PropertyType | 'all')[] = ['all', 'Maison', 'Appartement', 'Terrain', 'Local'];
+
+export function FilterBar({
+  filters,
+  onChange,
+}: {
+  filters: FiltersType;
+  onChange: (f: FiltersType) => void;
+}) {
+  const { t } = useI18n();
+
+  const setType = (type: PropertyType | 'all') => onChange({ ...filters, type });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2.5 sm:px-6">
+      <div className="flex items-center gap-1 rounded-full bg-slate-100 p-1">
+        {TYPE_OPTIONS.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setType(opt)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              filters.type === opt
+                ? 'bg-white text-brand-700 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {opt === 'all' ? t.allTypes : (t as any)[opt]}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder={t.minPrice}
+          value={filters.minPrice ?? ''}
+          onChange={(e) => onChange({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
+          className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+        />
+        <span className="text-slate-300">–</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          placeholder={t.maxPrice}
+          value={filters.maxPrice ?? ''}
+          onChange={(e) => onChange({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
+          className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+        />
+      </div>
+
+      {(filters.type !== 'all' || filters.minPrice != null || filters.maxPrice != null) && (
+        <button
+          onClick={() => onChange({ type: 'all' })}
+          className="ml-auto text-xs font-medium text-slate-400 hover:text-slate-700"
+        >
+          {t.reset}
+        </button>
+      )}
+    </div>
+  );
+}
