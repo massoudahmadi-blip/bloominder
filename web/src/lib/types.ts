@@ -123,6 +123,7 @@ export interface CommuneProfile {
     median_occupancy: number | null;
     median_revenue_year: number | null;
   } | null;
+  risk: { seismic_zone: string | null; risks: string | null; icpe_count: number | null; seveso_count: number | null } | null;
   benchmark: { dept: number | null; fr: number | null };
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }

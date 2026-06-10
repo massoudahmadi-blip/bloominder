@@ -217,6 +217,18 @@ export default function ReportPage() {
             </Card>
           )}
 
+          {/* Risks & nuisances */}
+          {data.risk && (
+            <Card title={t.risksTitle}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Kpi label={t.seismicLbl} value={data.risk.seismic_zone ?? '—'} />
+                <Kpi label={t.icpeLbl} value={data.risk.icpe_count != null ? String(data.risk.icpe_count) : '—'} />
+                <Kpi label={t.sevesoLbl} value={data.risk.seveso_count != null ? String(data.risk.seveso_count) : '—'} accent={(data.risk.seveso_count ?? 0) > 0} />
+              </div>
+              <p className="mt-3 text-sm text-slate-600">{data.risk.risks || t.risksNone}</p>
+            </Card>
+          )}
+
           {/* Methodology & sources */}
           <Card title={t.methodology}>
             <p className="text-xs text-slate-500">DVF (DGFiP/Etalab) · DPE (ADEME) · Carte des loyers · INSEE · DGFiP fiscalité · Inside Airbnb · BAN.</p>

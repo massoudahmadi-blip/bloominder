@@ -110,6 +110,16 @@ CREATE TABLE IF NOT EXISTS commune_airbnb (
   updated_at          timestamptz DEFAULT now()
 );
 
+-- Environmental risks per commune (Géorisques).
+CREATE TABLE IF NOT EXISTS commune_risk (
+  code_commune  text PRIMARY KEY,
+  seismic_zone  text,    -- zone de sismicité
+  risks         text,    -- comma-joined major risk labels (inondation, mouvement de terrain, ...)
+  icpe_count    int,     -- classified industrial installations
+  seveso_count  int,     -- of which SEVESO (seuil bas/haut)
+  updated_at    timestamptz DEFAULT now()
+);
+
 -- Local tax rates per commune (DGFiP "fiscalité locale des particuliers", REI).
 CREATE TABLE IF NOT EXISTS commune_tax (
   code_commune  text PRIMARY KEY,

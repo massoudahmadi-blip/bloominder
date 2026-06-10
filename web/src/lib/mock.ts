@@ -194,6 +194,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     demo: { population: 52000, pop_growth: null, median_income: null },
     tax: { taux_tfb: 34.2, taux_th: 18.5, thrs_major: null },
     airbnb: { listings: 640, median_nightly: 110, pct_entire: 72.5, median_occupancy: 48, median_revenue_year: 14800 },
+    risk: { seismic_zone: 'Zone 2 (faible)', risks: 'Inondation · Mouvement de terrain · Séisme · Transport de matières dangereuses', icpe_count: 72, seveso_count: 2 },
     benchmark: { dept: Math.round(med * 0.92), fr: 3100 },
     valeur_verte: [
       { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },

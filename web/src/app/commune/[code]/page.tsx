@@ -166,6 +166,24 @@ export default function CommunePage() {
               </section>
             )}
 
+            {/* Risks & nuisances */}
+            {data.risk && (
+              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.risksTitle}</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <Kpi label={t.seismicLbl} value={data.risk.seismic_zone ?? '—'} />
+                  <Kpi label={t.icpeLbl} value={data.risk.icpe_count != null ? String(data.risk.icpe_count) : '—'} />
+                  <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center">
+                    <div className={`text-lg font-bold ${(data.risk.seveso_count ?? 0) > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                      {data.risk.seveso_count != null ? data.risk.seveso_count : '—'}
+                    </div>
+                    <div className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{t.sevesoLbl}</div>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-slate-600">{data.risk.risks || t.risksNone}</p>
+              </section>
+            )}
+
             {/* Transactions drill-down */}
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">

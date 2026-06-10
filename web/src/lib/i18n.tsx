@@ -155,6 +155,11 @@ const dict = {
     banText: 'Logements interdits à la location : G dès 2025, F en 2028, E en 2034.',
     renoUpside: 'Potentiel de revalorisation (rénovation)',
     methodology: 'Méthodologie & sources', recentSales: 'Ventes récentes',
+    risksTitle: 'Risques & nuisances',
+    seismicLbl: 'Zone sismique',
+    icpeLbl: 'Sites industriels (ICPE)',
+    sevesoLbl: 'dont SEVESO',
+    risksNone: 'Aucun risque majeur recensé',
   },
   en: {
     tagline: 'French property sold prices',
@@ -306,6 +311,11 @@ const dict = {
     banText: 'Homes barred from letting: G from 2025, F in 2028, E in 2034.',
     renoUpside: 'Renovation upside',
     methodology: 'Methodology & sources', recentSales: 'Recent sales',
+    risksTitle: 'Risks & nuisances',
+    seismicLbl: 'Seismic zone',
+    icpeLbl: 'Industrial sites (ICPE)',
+    sevesoLbl: 'of which SEVESO',
+    risksNone: 'No major risk recorded',
   },
 } as const;
 
