@@ -176,6 +176,26 @@ If those return rows, **the data backbone is working.** 🎉
 
 ---
 
+## 8b. Historical data 2014–2018 (raw DGFiP + geocoding)
+
+The recent geo-DVF (§6) only covers the rolling ~5-year window. For older years we use the
+raw DGFiP files (national, no coordinates), which we **geocode** via the French BAN service.
+
+```bash
+cd ~/bloominder/infra
+git pull
+chmod +x load_dvf_raw.sh
+./load_dvf_raw.sh 13 2014 2018      # pilot: validate the pipeline on Bouches-du-Rhône
+```
+Per year it: downloads the ~300 MB national file, extracts the department's real sales,
+geocodes the unique addresses, and loads them into `transactions`. The final summary prints
+`total`, `with_coords` (how many got coordinates), and the date range.
+
+> National rollout (all France) is the next stage — a department-by-department loop — added
+> once the pilot above is confirmed and we've measured BAN geocoding throughput.
+
+---
+
 ## 9. Go live with HTTPS (reverse proxy)
 
 When the data looks good and you want `bloominder.com` online, **Caddy** runs the whole stack
