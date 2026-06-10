@@ -40,7 +40,21 @@ export async function getComparables(lat: number, lon: number, type?: string | n
   const res = await fetch(url);
   if (!res.ok) throw new Error(`comparables ${res.status}`);
   const data = await res.json();
-  return data.comparables ?? [];
+  // The API returns raw DB column names; map them to the frontend Sale shape.
+  return (data.comparables ?? []).map((r: any): Sale => ({
+    id: r.id,
+    id_mutation: r.id_mutation,
+    date: r.date_mutation,
+    prix: Number(r.valeur_fonciere),
+    type: r.type_local ?? null,
+    prix_m2: r.prix_m2 != null ? Number(r.prix_m2) : null,
+    adresse: r.adresse,
+    nom_commune: r.nom_commune,
+    surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
+    nb_pieces: r.nb_pieces ?? null,
+    longitude: r.longitude ?? 0,
+    latitude: r.latitude ?? 0,
+  }));
 }
 
 export async function getTrend(codeCommune?: string, type?: string | null): Promise<YearTrend[]> {

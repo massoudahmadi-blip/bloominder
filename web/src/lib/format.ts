@@ -21,6 +21,7 @@ export function formatPriceM2(value: number | null | undefined, locale = 'fr'): 
 
 export function formatDate(iso: string, locale = 'fr'): string {
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
   return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-GB', {
     year: 'numeric',
     month: 'long',
@@ -29,7 +30,8 @@ export function formatDate(iso: string, locale = 'fr'): string {
 }
 
 export function formatYear(iso: string): string {
-  return new Date(iso).getFullYear().toString();
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.getFullYear().toString();
 }
 
 // Color scale by €/m² — shared by map markers (as a step expression) and the legend/cards.
