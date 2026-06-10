@@ -138,6 +138,7 @@ export default function ScreenerPage() {
                 <Th col="prix_m2_growth_3y" label={t.colGrowth} right />
                 <th className="px-3 py-2 text-right font-medium">{t.colRent}</th>
                 <Th col="rendement_brut_appartement" label={t.colYield} right />
+                <th className="px-3 py-2 text-right font-medium">{t.colResale}</th>
                 <th className="px-3 py-2 text-right font-medium">{t.colPassoire}</th>
                 <Th col="ventes_total" label={t.colVentes} right />
               </tr>
@@ -163,6 +164,7 @@ export default function ScreenerPage() {
                     <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.prix_m2_growth_3y != null && r.prix_m2_growth_3y < 0 ? '#ef4444' : '#10b981' }}>{pct(r.prix_m2_growth_3y, true)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{r.loyer_m2_appartement != null ? `${r.loyer_m2_appartement} €` : '—'}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800">{pct(r.rendement_brut_appartement)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{pct(r.resale_gain, true)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{pct(r.pct_passoire)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{r.ventes_total}</td>
                   </tr>

@@ -46,6 +46,12 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
               {sale.adresse ? `${sale.adresse}, ` : ''}
               {sale.code_postal} {sale.nom_commune}
             </div>
+            {sale.resale_pct != null && (
+              <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                {t.resold} {sale.resale_pct > 0 ? '+' : ''}{sale.resale_pct}%
+                {sale.resale_prev_date ? ` · ${new Date(sale.resale_prev_date).getFullYear()}` : ''}
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}

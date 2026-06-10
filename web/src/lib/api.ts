@@ -29,6 +29,8 @@ export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale
     prix: feat.properties.prix,
     type: feat.properties.type ?? null,
     prix_m2: feat.properties.prix_m2 ?? null,
+    resale_pct: feat.properties.resale_pct ?? null,
+    resale_prev_date: feat.properties.resale_prev_date ?? null,
     longitude: feat.geometry.coordinates[0],
     latitude: feat.geometry.coordinates[1],
   }));

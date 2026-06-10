@@ -60,6 +60,7 @@ function makeSales(): Sale[] {
         if (type === 'Maison') surface_terrain = 150 + Math.floor(rnd() * 1200);
       }
 
+      const resalePct = rnd() > 0.7 ? Math.round(rnd() * 35 + 5) : null;
       sales.push({
         id: id++,
         id_mutation: `2024-${c.code}-${i}`,
@@ -74,6 +75,8 @@ function makeSales(): Sale[] {
         surface_bati,
         nb_pieces,
         surface_terrain,
+        resale_pct: resalePct,
+        resale_prev_date: resalePct != null ? `${year - 4}-06-15` : undefined,
         longitude: Number(lon.toFixed(6)),
         latitude: Number(lat.toFixed(6)),
       });
@@ -133,6 +136,7 @@ export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'):
       score_growth: 71 - i * 4,
       score_demand: 68 - i * 3,
       pct_passoire: 11 + i * 2,
+      resale_gain: 22 - i * 3,
     };
   });
   const key = (sort ?? 'score_global') as keyof CommuneRow;

@@ -113,6 +113,8 @@ const dict = {
     colType: 'Type',
     colPrice: 'Prix',
     kpiPopulation: 'Population',
+    colResale: 'Plus-value revente',
+    resold: 'Revendu',
   },
   en: {
     tagline: 'French property sold prices',
@@ -222,6 +224,8 @@ const dict = {
     colType: 'Type',
     colPrice: 'Price',
     kpiPopulation: 'Population',
+    colResale: 'Resale gain',
+    resold: 'Resold',
   },
 } as const;
 

@@ -57,10 +57,11 @@ export async function screenerRoutes(app: FastifyInstance) {
               m.prix_m2_growth_3y, m.loyer_m2_appartement,
               m.rendement_brut_appartement, m.rendement_brut_maison,
               s.score_global, s.score_yield, s.score_growth, s.score_demand,
-              cd.pct_passoire
+              cd.pct_passoire, cr.median_gain_pct AS resale_gain
        FROM commune_metrics m
        LEFT JOIN commune_scores s USING (code_commune)
        LEFT JOIN commune_dpe cd USING (code_commune)
+       LEFT JOIN commune_resale cr USING (code_commune)
        WHERE ${whereSql}
        ORDER BY ${sortCol} ${dir} NULLS LAST
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -86,6 +87,10 @@ export async function screenerRoutes(app: FastifyInstance) {
       `SELECT population, pop_growth, median_income FROM commune_demo WHERE code_commune = $1`,
       [code],
     );
+    const [resale] = await query(
+      `SELECT resales, median_gain_pct, median_annualized FROM commune_resale WHERE code_commune = $1`,
+      [code],
+    );
     const valeur_verte = await query(
       `SELECT td.etiquette_dpe AS classe, count(*)::int AS ventes,
               round(percentile_cont(0.5) WITHIN GROUP (ORDER BY t.prix_m2)) AS median_eur_m2
@@ -94,6 +99,6 @@ export async function screenerRoutes(app: FastifyInstance) {
        GROUP BY td.etiquette_dpe ORDER BY classe`,
       [code],
     );
-    return { metrics, scores: scores ?? null, dpe: dpe ?? null, demo: demo ?? null, valeur_verte };
+    return { metrics, scores: scores ?? null, dpe: dpe ?? null, demo: demo ?? null, resale: resale ?? null, valeur_verte };
   });
 }

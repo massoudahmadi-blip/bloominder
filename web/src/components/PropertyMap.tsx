@@ -240,6 +240,12 @@ export function PropertyMap({
                 {selected.surface_bati != null && <span>{formatM2(selected.surface_bati)}</span>}
                 {selected.nb_pieces != null && <span>{selected.nb_pieces} p.</span>}
               </div>
+              {selected.resale_pct != null && (
+                <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                  {t.resold} {selected.resale_pct > 0 ? '+' : ''}{selected.resale_pct}%
+                  {selected.resale_prev_date ? ` · ${new Date(selected.resale_prev_date).getFullYear()}` : ''}
+                </div>
+              )}
             </div>
           </Popup>
         )}

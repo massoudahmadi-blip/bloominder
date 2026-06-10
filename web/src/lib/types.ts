@@ -14,6 +14,8 @@ export interface Sale {
   surface_bati?: number | null;
   nb_pieces?: number | null;
   surface_terrain?: number | null;
+  resale_pct?: number | null; // realized gain vs the previous sale of the same property
+  resale_prev_date?: string | null;
   longitude: number;
   latitude: number;
 }
@@ -56,6 +58,7 @@ export interface CommuneRow {
   score_growth: number | null;
   score_demand: number | null;
   pct_passoire: number | null;
+  resale_gain: number | null;
 }
 
 export type ScreenerSort =
