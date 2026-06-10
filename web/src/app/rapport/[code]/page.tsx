@@ -217,6 +217,18 @@ export default function ReportPage() {
             </Card>
           )}
 
+          {/* Cadre de vie */}
+          {data.livability && (data.livability.schools ?? 0) > 0 && (
+            <Card title={t.livabilityTitle}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Kpi label={t.schoolsLbl} value={data.livability.ecoles != null ? String(data.livability.ecoles) : '—'} />
+                <Kpi label={t.collegesLbl} value={data.livability.colleges != null ? String(data.livability.colleges) : '—'} />
+                <Kpi label={t.lyceesLbl} value={data.livability.lycees != null ? String(data.livability.lycees) : '—'} />
+                <Kpi label={t.eduPriority} value={data.livability.education_prioritaire ? '✓' : '—'} />
+              </div>
+            </Card>
+          )}
+
           {/* Risks & nuisances */}
           {data.risk && (
             <Card title={t.risksTitle}>

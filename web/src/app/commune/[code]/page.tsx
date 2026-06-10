@@ -166,6 +166,19 @@ export default function CommunePage() {
               </section>
             )}
 
+            {/* Cadre de vie */}
+            {data.livability && (data.livability.schools ?? 0) > 0 && (
+              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.livabilityTitle}</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Kpi label={t.schoolsLbl} value={data.livability.ecoles != null ? String(data.livability.ecoles) : '—'} />
+                  <Kpi label={t.collegesLbl} value={data.livability.colleges != null ? String(data.livability.colleges) : '—'} />
+                  <Kpi label={t.lyceesLbl} value={data.livability.lycees != null ? String(data.livability.lycees) : '—'} />
+                  <Kpi label={t.eduPriority} value={data.livability.education_prioritaire ? '✓' : '—'} />
+                </div>
+              </section>
+            )}
+
             {/* Risks & nuisances */}
             {data.risk && (
               <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">

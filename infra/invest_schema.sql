@@ -110,6 +110,19 @@ CREATE TABLE IF NOT EXISTS commune_airbnb (
   updated_at          timestamptz DEFAULT now()
 );
 
+-- Livability / cadre de vie per commune (schools now; crime/health/transport/fiber later).
+CREATE TABLE IF NOT EXISTS commune_livability (
+  code_commune          text PRIMARY KEY,
+  schools               int,
+  ecoles                int,
+  colleges              int,
+  lycees                int,
+  education_prioritaire boolean,
+  crime_rate            numeric,   -- per 1000 (added later, SSMSI)
+  doctors               numeric,   -- (added later, DREES/BPE)
+  updated_at            timestamptz DEFAULT now()
+);
+
 -- Environmental risks per commune (Géorisques).
 CREATE TABLE IF NOT EXISTS commune_risk (
   code_commune  text PRIMARY KEY,

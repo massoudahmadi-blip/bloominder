@@ -160,6 +160,11 @@ const dict = {
     icpeLbl: 'Sites industriels (ICPE)',
     sevesoLbl: 'dont SEVESO',
     risksNone: 'Aucun risque majeur recensé',
+    livabilityTitle: 'Cadre de vie',
+    schoolsLbl: 'Écoles',
+    collegesLbl: 'Collèges',
+    lyceesLbl: 'Lycées',
+    eduPriority: 'Éducation prioritaire (REP)',
   },
   en: {
     tagline: 'French property sold prices',
@@ -316,6 +321,11 @@ const dict = {
     icpeLbl: 'Industrial sites (ICPE)',
     sevesoLbl: 'of which SEVESO',
     risksNone: 'No major risk recorded',
+    livabilityTitle: 'Living environment',
+    schoolsLbl: 'Schools',
+    collegesLbl: 'Middle schools',
+    lyceesLbl: 'High schools',
+    eduPriority: 'Priority education (REP)',
   },
 } as const;
 

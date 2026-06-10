@@ -124,6 +124,7 @@ export interface CommuneProfile {
     median_revenue_year: number | null;
   } | null;
   risk: { seismic_zone: string | null; risks: string | null; icpe_count: number | null; seveso_count: number | null } | null;
+  livability: { schools: number | null; ecoles: number | null; colleges: number | null; lycees: number | null; education_prioritaire: boolean | null } | null;
   benchmark: { dept: number | null; fr: number | null };
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }

@@ -107,6 +107,11 @@ export async function screenerRoutes(app: FastifyInstance) {
       `SELECT seismic_zone, risks, icpe_count, seveso_count FROM commune_risk WHERE code_commune = $1`,
       [code],
     );
+    const [livability] = await query(
+      `SELECT schools, ecoles, colleges, lycees, education_prioritaire
+       FROM commune_livability WHERE code_commune = $1`,
+      [code],
+    );
     const [benchDep] = await query<{ median_prix_m2: number }>(
       `SELECT median_prix_m2 FROM benchmark WHERE scope='DEP' AND code=$1`,
       [(metrics as any).code_departement],
@@ -125,6 +130,7 @@ export async function screenerRoutes(app: FastifyInstance) {
     return {
       metrics, scores: scores ?? null, dpe: dpe ?? null, demo: demo ?? null,
       resale: resale ?? null, tax: tax ?? null, airbnb: airbnb ?? null, risk: risk ?? null,
+      livability: livability ?? null,
       benchmark: { dept: benchDep?.median_prix_m2 ?? null, fr: benchFr?.median_prix_m2 ?? null },
       valeur_verte,
     };
