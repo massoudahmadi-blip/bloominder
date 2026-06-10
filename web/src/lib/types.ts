@@ -78,6 +78,7 @@ export type ScreenerSort =
 
 export interface ScreenerParams {
   dept?: string;
+  postal?: string;
   minYield?: number;
   minScore?: number;
   q?: string;

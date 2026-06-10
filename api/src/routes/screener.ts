@@ -10,6 +10,7 @@ const SORTS = [
 
 const ScreenerQuery = z.object({
   dept: z.string().optional(),
+  postal: z.string().optional(),
   minVentes: z.coerce.number().optional(),
   minYield: z.coerce.number().optional(),
   minScore: z.coerce.number().optional(),
@@ -35,6 +36,7 @@ export async function screenerRoutes(app: FastifyInstance) {
       where.push(clause.replace('?', `$${params.length}`));
     };
     if (q.dept) add('m.code_departement = ?', q.dept);
+    if (q.postal) add('m.code_postal LIKE ?', `${q.postal}%`);
     if (q.minVentes != null) add('m.ventes_total >= ?', q.minVentes);
     if (q.minYield != null) add('m.rendement_brut_appartement >= ?', q.minYield);
     if (q.minScore != null) add('s.score_global >= ?', q.minScore);
@@ -52,7 +54,7 @@ export async function screenerRoutes(app: FastifyInstance) {
 
     params.push(q.pageSize, (q.page - 1) * q.pageSize);
     const results = await query(
-      `SELECT m.code_commune, m.nom_commune, m.code_departement, m.ventes_total,
+      `SELECT m.code_commune, m.nom_commune, m.code_departement, m.code_postal, m.ventes_total,
               m.median_prix_m2, m.median_prix_m2_appartement, m.median_prix_m2_maison,
               m.prix_m2_growth_3y, m.loyer_m2_appartement,
               m.rendement_brut_appartement, m.rendement_brut_maison,

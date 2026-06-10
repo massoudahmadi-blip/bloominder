@@ -31,6 +31,7 @@ agg AS (
   SELECT code_commune,
     max(nom_commune)      AS nom_commune,
     max(code_departement) AS code_departement,
+    mode() WITHIN GROUP (ORDER BY code_postal) FILTER (WHERE code_postal IS NOT NULL) AS code_postal,
     count(*)              AS ventes_total,
     count(*) FILTER (WHERE date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS ventes_12m,
     count(*) FILTER (WHERE type_local='Appartement' AND prix_m2 BETWEEN 400 AND 25000)   AS n_app,
@@ -51,7 +52,7 @@ agg AS (
 INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_total,ventes_12m,
   median_prix_m2,median_prix_m2_appartement,median_prix_m2_maison,prix_m2_growth_3y,
   loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison,
-  p25_prix_m2,p75_prix_m2)
+  p25_prix_m2,p75_prix_m2,code_postal)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
   CASE WHEN a.med_3y > 0
@@ -64,7 +65,7 @@ SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.vent
   CASE WHEN a.med_mai > 0 AND rc.loyer_m2_maison IS NOT NULL
         AND (rc.loyer_m2_maison * 12 / a.med_mai * 100) <= 25
        THEN round((rc.loyer_m2_maison * 12 / a.med_mai * 100)::numeric, 2) END,
-  round(a.p25), round(a.p75)
+  round(a.p25), round(a.p75), a.code_postal
 FROM agg a
 LEFT JOIN rents_commune rc ON rc.code_commune = a.code_commune
 WHERE a.ventes_total >= 5;

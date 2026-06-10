@@ -90,6 +90,7 @@ export async function getScreener(p: ScreenerParams): Promise<ScreenerResult> {
   }
   const sp = new URLSearchParams();
   if (p.dept) sp.set('dept', p.dept);
+  if (p.postal) sp.set('postal', p.postal);
   if (p.minYield != null) sp.set('minYield', String(p.minYield));
   if (p.minScore != null) sp.set('minScore', String(p.minScore));
   if (p.q) sp.set('q', p.q);

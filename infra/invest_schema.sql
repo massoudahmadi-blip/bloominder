@@ -46,6 +46,7 @@ CREATE INDEX IF NOT EXISTS commune_scores_global_idx ON commune_scores (score_gl
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS p25_prix_m2 numeric;
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS p75_prix_m2 numeric;
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS median_days_to_sell int;  -- DPE→deed liquidity
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS code_postal text;          -- representative postal code
 
 -- Benchmarks for peer comparison (national + per-department median €/m²).
 CREATE TABLE IF NOT EXISTS benchmark (

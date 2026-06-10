@@ -38,10 +38,19 @@ export default function ScreenerPage() {
   const [dir, setDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [dept, setDept] = useState('');
+  const [postal, setPostal] = useState('');
   const [q, setQ] = useState('');
   const [minYield, setMinYield] = useState('');
   const [minScore, setMinScore] = useState('');
+  const [depts, setDepts] = useState<{ code: string; nom: string }[]>([]);
   const pageSize = 25;
+
+  useEffect(() => {
+    fetch('https://geo.api.gouv.fr/departements?fields=nom,code')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setDepts(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +59,7 @@ export default function ScreenerPage() {
       getScreener({
         sort, dir, page, pageSize,
         dept: dept || undefined,
+        postal: postal || undefined,
         q: q || undefined,
         minYield: minYield ? Number(minYield) : undefined,
         minScore: minScore ? Number(minScore) : undefined,
@@ -63,7 +73,7 @@ export default function ScreenerPage() {
         .finally(() => !cancelled && setLoading(false));
     }, 250);
     return () => { cancelled = true; clearTimeout(h); };
-  }, [sort, dir, page, dept, q, minYield, minScore]);
+  }, [sort, dir, page, dept, postal, q, minYield, minScore]);
 
   const toggleSort = (col: ScreenerSort) => {
     if (sort === col) setDir(dir === 'desc' ? 'asc' : 'desc');
@@ -120,8 +130,15 @@ export default function ScreenerPage() {
               placeholder="Lyon, Bordeaux…" className="w-44 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
           </Field>
           <Field label={t.filterDept}>
-            <input value={dept} onChange={(e) => { setDept(e.target.value); setPage(1); }}
-              placeholder="13" className="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
+            <select value={dept} onChange={(e) => { setDept(e.target.value); setPage(1); }}
+              className="w-48 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100">
+              <option value="">—</option>
+              {depts.map((d) => <option key={d.code} value={d.code}>{d.code} · {d.nom}</option>)}
+            </select>
+          </Field>
+          <Field label={t.filterPostal}>
+            <input value={postal} onChange={(e) => { setPostal(e.target.value); setPage(1); }}
+              placeholder="130…" className="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
           </Field>
           <Field label={t.filterMinYield}>
             <input type="number" value={minYield} onChange={(e) => { setMinYield(e.target.value); setPage(1); }}
