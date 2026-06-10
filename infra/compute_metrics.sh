@@ -4,6 +4,10 @@
 # (DVF) and rents_commune (Carte des loyers). Run AFTER the DVF load and
 # load_rents.sh. Re-run any time data refreshes — fully idempotent.
 #
+# Robustness: €/m² is clamped to a plausible band (400–25000) to drop DVF junk
+# (garages, tiny/multi-lot rows); yields/growth are capped; only markets with
+# enough activity are scored — so tiny hamlets & outliers don't dominate.
+#
 # Usage:  ./compute_metrics.sh
 # ---------------------------------------------------------------------------
 set -euo pipefail
@@ -19,7 +23,7 @@ psql < "$HERE/invest_schema.sql" >/dev/null
 
 echo ">> Computing commune_metrics (median €/m², 3y growth, gross yield)..."
 psql >/dev/null <<'SQL'
-SET work_mem = '256MB';                 -- keep the median sorts in RAM, not on disk
+SET work_mem = '256MB';
 SET max_parallel_workers_per_gather = 4;
 TRUNCATE commune_metrics;
 WITH b AS (SELECT max(date_mutation) AS maxd FROM transactions),
@@ -29,13 +33,14 @@ agg AS (
     max(code_departement) AS code_departement,
     count(*)              AS ventes_total,
     count(*) FILTER (WHERE date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS ventes_12m,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 IS NOT NULL) AS med_all,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 IS NOT NULL AND type_local='Appartement') AS med_app,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 IS NOT NULL AND type_local='Maison') AS med_mai,
+    count(*) FILTER (WHERE type_local='Appartement' AND prix_m2 BETWEEN 400 AND 25000)   AS n_app,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS med_all,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Appartement') AS med_app,
+    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Maison') AS med_mai,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
-      WHERE prix_m2 IS NOT NULL AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS med_now,
+      WHERE prix_m2 BETWEEN 400 AND 25000 AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS med_now,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
-      WHERE prix_m2 IS NOT NULL
+      WHERE prix_m2 BETWEEN 400 AND 25000
         AND date_mutation <  (SELECT maxd FROM b) - INTERVAL '36 months'
         AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '48 months') AS med_3y
   FROM transactions
@@ -46,11 +51,15 @@ INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_tot
   loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
-  CASE WHEN a.med_3y > 0 THEN round(((a.med_now - a.med_3y) / a.med_3y * 100)::numeric, 1) END,
+  CASE WHEN a.med_3y > 0
+        AND ((a.med_now - a.med_3y) / a.med_3y * 100) BETWEEN -50 AND 200
+       THEN round(((a.med_now - a.med_3y) / a.med_3y * 100)::numeric, 1) END,
   rc.loyer_m2_appartement, rc.loyer_m2_maison,
-  CASE WHEN a.med_app > 0 AND rc.loyer_m2_appartement IS NOT NULL
+  CASE WHEN a.med_app > 0 AND a.n_app >= 10 AND rc.loyer_m2_appartement IS NOT NULL
+        AND (rc.loyer_m2_appartement * 12 / a.med_app * 100) <= 25
        THEN round((rc.loyer_m2_appartement * 12 / a.med_app * 100)::numeric, 2) END,
   CASE WHEN a.med_mai > 0 AND rc.loyer_m2_maison IS NOT NULL
+        AND (rc.loyer_m2_maison * 12 / a.med_mai * 100) <= 25
        THEN round((rc.loyer_m2_maison * 12 / a.med_mai * 100)::numeric, 2) END
 FROM agg a
 LEFT JOIN rents_commune rc ON rc.code_commune = a.code_commune
@@ -62,11 +71,11 @@ psql >/dev/null <<'SQL'
 TRUNCATE commune_scores;
 WITH base AS (
   SELECT code_commune,
-         COALESCE(rendement_brut_appartement, rendement_brut_maison) AS yield,
-         prix_m2_growth_3y AS growth,
-         ventes_12m        AS demand
+         CASE WHEN rendement_brut_appartement BETWEEN 1 AND 15 THEN rendement_brut_appartement END AS yield,
+         CASE WHEN prix_m2_growth_3y BETWEEN -40 AND 80 THEN prix_m2_growth_3y END AS growth,
+         ventes_12m AS demand
   FROM commune_metrics
-  WHERE ventes_total >= 20
+  WHERE ventes_total >= 50 AND ventes_12m >= 10      -- genuinely active markets only
 ),
 ranked AS (
   SELECT code_commune,
@@ -83,9 +92,9 @@ SELECT code_commune, score_yield, score_growth, score_demand,
 FROM ranked;
 SQL
 
-echo ">> Done. Top 15 communes by global score:"
-psql -c "SELECT m.code_commune, m.nom_commune, m.median_prix_m2, m.rendement_brut_appartement AS yield_appt,
-  m.prix_m2_growth_3y AS growth_3y, s.score_global
+echo ">> Done. Top 15 markets by global score (active markets only):"
+psql -c "SELECT m.code_commune, m.nom_commune, m.ventes_total AS ventes, m.median_prix_m2 AS prix_m2,
+  m.rendement_brut_appartement AS yield_appt, m.prix_m2_growth_3y AS growth_3y, s.score_global
 FROM commune_scores s JOIN commune_metrics m USING(code_commune)
-WHERE m.ventes_total >= 50
+WHERE m.ventes_total >= 200
 ORDER BY s.score_global DESC LIMIT 15;"
