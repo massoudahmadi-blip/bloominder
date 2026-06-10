@@ -50,6 +50,7 @@ demand signals, growth trends, cross-city ranking, or investor reports. That is 
 | **Local context: risks** | **Géorisques** (ICPE/SEVESO industrial sites, waste/incineration), **BASOL/BASIAS** (polluted soils) | negative catalysts (pollution, nuisances) near a property/commune | yearly |
 | **Local context: catalysts** | large **building permits** (Sit@del2), transit projects, new schools/employers; **news feed** (Google News RSS) + LLM classification | positive/negative local "events" (new station, mall, factory, company arrival/closure) explaining potential | continuous |
 | Geocoding / addresses | **BAN** | address autocomplete + lat/lon | continuous |
+| **Cadastre** | **Etalab cadastre** (cadastre.data.gouv.fr) — parcelles GeoJSON (geometry + contenance/area) | land area for house reports, **parcel polygon on the map**, and grouping same-mutation lots to fix multi-lot €/m² inflation | periodic |
 | Map tiles | CARTO (now) → IGN Géoplateforme | basemap | — |
 
 ⚠️ **Short-let policy:** use **Inside Airbnb only** (legal public datasets). **No direct Airbnb/portal
