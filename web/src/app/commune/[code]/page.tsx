@@ -67,8 +67,18 @@ export default function CommunePage() {
           <div className="mt-16 text-center text-slate-400">{t.notFound}</div>
         ) : (
           <>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">{m.nom_commune}</h1>
-            <p className="mt-0.5 text-sm text-slate-400">{m.code_departement} · INSEE {m.code_commune}</p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{m.nom_commune}</h1>
+                <p className="mt-0.5 text-sm text-slate-400">{m.code_departement} · INSEE {m.code_commune}</p>
+              </div>
+              <a
+                href={`/calculateur?prix=${Math.round((m.median_prix_m2_appartement ?? m.median_prix_m2 ?? 0) * 50)}&loyer=${Math.round((m.loyer_m2_appartement ?? 0) * 50)}`}
+                className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
+              >
+                {t.simulate}
+              </a>
+            </div>
 
             {/* Scores */}
             <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">

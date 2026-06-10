@@ -95,6 +95,7 @@ export default function ScreenerPage() {
         <nav className="flex items-center gap-1 text-sm">
           <a href="/" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.mapTab}</a>
           <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-brand-700">{t.markets}</a>
+          <a href="/calculateur" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.calculator}</a>
         </nav>
         <div className="ml-auto flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
           {(['fr', 'en'] as const).map((l) => (
