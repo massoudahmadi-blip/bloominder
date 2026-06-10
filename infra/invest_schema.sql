@@ -69,6 +69,17 @@ CREATE TABLE IF NOT EXISTS transaction_dpe (
 );
 CREATE INDEX IF NOT EXISTS transaction_dpe_label_idx ON transaction_dpe (etiquette_dpe);
 
+-- Per-commune demographics (INSEE). population now; growth + income to follow.
+CREATE TABLE IF NOT EXISTS commune_demo (
+  code_commune      text PRIMARY KEY,
+  code_departement  text,
+  population        int,
+  population_prev   int,
+  pop_growth        numeric,   -- % change vs an earlier census (added later)
+  median_income     numeric,   -- niveau de vie médian (added later)
+  updated_at        timestamptz DEFAULT now()
+);
+
 -- Per-commune energy profile of the housing stock.
 CREATE TABLE IF NOT EXISTS commune_dpe (
   code_commune  text PRIMARY KEY,

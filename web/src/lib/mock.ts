@@ -174,6 +174,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     },
     scores: { score_yield: 72, score_growth: 64, score_demand: 70, score_global: 69 },
     dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
+    demo: { population: 52000, pop_growth: null, median_income: null },
     valeur_verte: [
       { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },
       { classe: 'C', ventes: 110, median_eur_m2: Math.round(med * 1.05) },

@@ -70,18 +70,22 @@ echo ">> Computing commune_scores (default weights: yield .45 / growth .35 / dem
 psql >/dev/null <<'SQL'
 TRUNCATE commune_scores;
 WITH base AS (
-  SELECT code_commune,
-         CASE WHEN rendement_brut_appartement BETWEEN 1 AND 15 THEN rendement_brut_appartement END AS yield,
-         CASE WHEN prix_m2_growth_3y BETWEEN -40 AND 80 THEN prix_m2_growth_3y END AS growth,
-         ventes_12m AS demand
-  FROM commune_metrics
-  WHERE ventes_total >= 50 AND ventes_12m >= 10      -- genuinely active markets only
+  SELECT m.code_commune,
+         CASE WHEN m.rendement_brut_appartement BETWEEN 1 AND 15 THEN m.rendement_brut_appartement END AS yield,
+         CASE WHEN m.prix_m2_growth_3y BETWEEN -40 AND 80 THEN m.prix_m2_growth_3y END AS growth,
+         m.ventes_12m AS activity,
+         COALESCE(d.population, 0) AS population
+  FROM commune_metrics m
+  LEFT JOIN commune_demo d USING (code_commune)
+  WHERE m.ventes_total >= 50 AND m.ventes_12m >= 10      -- genuinely active markets only
 ),
 ranked AS (
   SELECT code_commune,
     CASE WHEN yield  IS NOT NULL THEN round((percent_rank() OVER (ORDER BY yield)  * 100)::numeric,1) END AS score_yield,
     CASE WHEN growth IS NOT NULL THEN round((percent_rank() OVER (ORDER BY growth) * 100)::numeric,1) END AS score_growth,
-    round((percent_rank() OVER (ORDER BY demand) * 100)::numeric,1) AS score_demand
+    -- demand = blend of market activity and population size (rewards real cities)
+    round(((0.5 * percent_rank() OVER (ORDER BY activity)
+          + 0.5 * percent_rank() OVER (ORDER BY population)) * 100)::numeric,1) AS score_demand
   FROM base
 )
 INSERT INTO commune_scores(code_commune,score_yield,score_growth,score_demand,score_global)

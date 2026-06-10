@@ -99,5 +99,6 @@ export interface CommuneProfile {
     score_global: number | null;
   } | null;
   dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
+  demo: { population: number | null; pop_growth: number | null; median_income: number | null } | null;
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }

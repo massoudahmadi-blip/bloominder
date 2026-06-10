@@ -82,6 +82,10 @@ export async function screenerRoutes(app: FastifyInstance) {
       `SELECT dpe_total, pct_passoire, pct_abc FROM commune_dpe WHERE code_commune = $1`,
       [code],
     );
+    const [demo] = await query(
+      `SELECT population, pop_growth, median_income FROM commune_demo WHERE code_commune = $1`,
+      [code],
+    );
     const valeur_verte = await query(
       `SELECT td.etiquette_dpe AS classe, count(*)::int AS ventes,
               round(percentile_cont(0.5) WITHIN GROUP (ORDER BY t.prix_m2)) AS median_eur_m2
@@ -90,6 +94,6 @@ export async function screenerRoutes(app: FastifyInstance) {
        GROUP BY td.etiquette_dpe ORDER BY classe`,
       [code],
     );
-    return { metrics, scores: scores ?? null, dpe: dpe ?? null, valeur_verte };
+    return { metrics, scores: scores ?? null, dpe: dpe ?? null, demo: demo ?? null, valeur_verte };
   });
 }
