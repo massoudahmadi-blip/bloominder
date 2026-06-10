@@ -4,9 +4,13 @@
 # (DVF) and rents_commune (Carte des loyers). Run AFTER the DVF load and
 # load_rents.sh. Re-run any time data refreshes — fully idempotent.
 #
-# Robustness: €/m² is clamped to a plausible band (400–25000) to drop DVF junk
-# (garages, tiny/multi-lot rows); yields/growth are capped; only markets with
-# enough activity are scored — so tiny hamlets & outliers don't dominate.
+# Multi-lot dedup: a DVF "mutation" (one sale) can span several rows/lots that
+# repeat the full price. We group on the natural key (commune, date, valeur)
+# to (a) correct each row's €/m² to the mutation's total built surface and
+# (b) compute commune medians/counts per MUTATION, not per row.
+#
+# Robustness: €/m² clamped to 400–25000 (drops garages/junk); yields/growth
+# capped; only active markets scored.
 #
 # Usage:  ./compute_metrics.sh
 # ---------------------------------------------------------------------------
@@ -21,32 +25,60 @@ psql() { docker compose -f "$HERE/docker-compose.yml" exec -T db psql -v ON_ERRO
 echo ">> Ensuring investor schema..."
 psql < "$HERE/invest_schema.sql" >/dev/null
 
-echo ">> Computing commune_metrics (median €/m², 3y growth, gross yield)..."
+echo ">> Correcting €/m² to mutation level (multi-lot dedup)..."
+psql >/dev/null <<'SQL'
+SET work_mem = '256MB';
+UPDATE transactions t SET prix_m2 = q.pm2
+FROM (
+  SELECT code_commune, date_mutation, valeur_fonciere,
+         round(valeur_fonciere / sum(surface_bati)) AS pm2
+  FROM transactions
+  WHERE valeur_fonciere > 0 AND surface_bati IS NOT NULL
+  GROUP BY code_commune, date_mutation, valeur_fonciere
+  HAVING sum(surface_bati) > 5
+) q
+WHERE t.code_commune = q.code_commune AND t.date_mutation = q.date_mutation
+  AND t.valeur_fonciere = q.valeur_fonciere AND t.surface_bati IS NOT NULL
+  AND t.prix_m2 IS DISTINCT FROM q.pm2;
+SQL
+
+echo ">> Computing commune_metrics (mutation-level median €/m², 3y growth, gross yield)..."
 psql >/dev/null <<'SQL'
 SET work_mem = '256MB';
 SET max_parallel_workers_per_gather = 4;
 TRUNCATE commune_metrics;
 WITH b AS (SELECT max(date_mutation) AS maxd FROM transactions),
+mut AS (
+  SELECT code_commune, date_mutation, valeur_fonciere,
+    max(nom_commune)      AS nom_commune,
+    max(code_departement) AS code_departement,
+    max(code_postal)      AS code_postal,
+    (array_agg(type_local ORDER BY surface_bati DESC NULLS LAST))[1] AS type_local,
+    CASE WHEN sum(surface_bati) > 5 THEN valeur_fonciere / sum(surface_bati) END AS prix_m2
+  FROM transactions
+  WHERE nature_mutation = 'Vente' AND valeur_fonciere > 0
+  GROUP BY code_commune, date_mutation, valeur_fonciere
+),
 agg AS (
   SELECT code_commune,
     max(nom_commune)      AS nom_commune,
     max(code_departement) AS code_departement,
-    mode() WITHIN GROUP (ORDER BY code_postal) FILTER (WHERE code_postal IS NOT NULL) AS code_postal,
+    max(code_postal)      AS code_postal,
     count(*)              AS ventes_total,
     count(*) FILTER (WHERE date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS ventes_12m,
     count(*) FILTER (WHERE type_local='Appartement' AND prix_m2 BETWEEN 400 AND 25000)   AS n_app,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS med_all,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Appartement') AS med_app,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Maison') AS med_mai,
-    percentile_cont(0.25) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p25,
-    percentile_cont(0.75) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p75,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS med_all,
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Appartement') AS med_app,
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Maison') AS med_mai,
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (
       WHERE prix_m2 BETWEEN 400 AND 25000 AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS med_now,
-    percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (
       WHERE prix_m2 BETWEEN 400 AND 25000
         AND date_mutation <  (SELECT maxd FROM b) - INTERVAL '36 months'
-        AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '48 months') AS med_3y
-  FROM transactions
+        AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '48 months') AS med_3y,
+    percentile_cont(0.25) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p25,
+    percentile_cont(0.75) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p75
+  FROM mut
   GROUP BY code_commune
 )
 INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_total,ventes_12m,
@@ -55,8 +87,7 @@ INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_tot
   p25_prix_m2,p75_prix_m2,code_postal)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
-  CASE WHEN a.med_3y > 0
-        AND ((a.med_now - a.med_3y) / a.med_3y * 100) BETWEEN -50 AND 200
+  CASE WHEN a.med_3y > 0 AND ((a.med_now - a.med_3y) / a.med_3y * 100) BETWEEN -50 AND 200
        THEN round(((a.med_now - a.med_3y) / a.med_3y * 100)::numeric, 1) END,
   rc.loyer_m2_appartement, rc.loyer_m2_maison,
   CASE WHEN a.med_app > 0 AND a.n_app >= 10 AND rc.loyer_m2_appartement IS NOT NULL
@@ -105,13 +136,12 @@ WITH base AS (
          COALESCE(d.population, 0) AS population
   FROM commune_metrics m
   LEFT JOIN commune_demo d USING (code_commune)
-  WHERE m.ventes_total >= 50 AND m.ventes_12m >= 10      -- genuinely active markets only
+  WHERE m.ventes_total >= 50 AND m.ventes_12m >= 10
 ),
 ranked AS (
   SELECT code_commune,
     CASE WHEN yield  IS NOT NULL THEN round((percent_rank() OVER (ORDER BY yield)  * 100)::numeric,1) END AS score_yield,
     CASE WHEN growth IS NOT NULL THEN round((percent_rank() OVER (ORDER BY growth) * 100)::numeric,1) END AS score_growth,
-    -- demand = blend of market activity and population size (rewards real cities)
     round(((0.5 * percent_rank() OVER (ORDER BY activity)
           + 0.5 * percent_rank() OVER (ORDER BY population)) * 100)::numeric,1) AS score_demand
   FROM base
