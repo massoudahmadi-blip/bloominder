@@ -19,6 +19,8 @@ psql < "$HERE/invest_schema.sql" >/dev/null
 
 echo ">> Computing commune_metrics (median €/m², 3y growth, gross yield)..."
 psql >/dev/null <<'SQL'
+SET work_mem = '256MB';                 -- keep the median sorts in RAM, not on disk
+SET max_parallel_workers_per_gather = 4;
 TRUNCATE commune_metrics;
 WITH b AS (SELECT max(date_mutation) AS maxd FROM transactions),
 agg AS (
