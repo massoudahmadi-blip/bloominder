@@ -214,6 +214,25 @@ have no DVF data and are skipped automatically.
 
 ---
 
+## 8d. Investor layer (Phase A): rents → metrics → scores
+
+Turns raw sales into per-commune investment metrics and scores.
+
+```bash
+cd ~/bloominder/infra
+git pull
+# 1. Rents (independent of DVF — can run any time, even during the national load):
+./load_rents.sh
+# 2. After the national DVF load has finished, compute metrics + scores:
+./compute_metrics.sh
+```
+`load_rents.sh` ingests the gouv "Carte des loyers" (indicative €/m² rent per commune) into
+`rents_commune`. `compute_metrics.sh` builds `commune_metrics` (median €/m², 3-yr growth, gross
+yield) and `commune_scores` (yield/growth/demand → global, default weights 0.45/0.35/0.20), then
+prints the top communes by score. Re-run `compute_metrics.sh` after any data refresh.
+
+---
+
 ## 9. Go live with HTTPS (reverse proxy)
 
 When the data looks good and you want `bloominder.com` online, **Caddy** runs the whole stack
