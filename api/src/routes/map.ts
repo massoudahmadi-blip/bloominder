@@ -9,6 +9,11 @@ const MapQuery = z.object({
   type: z.string().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
+  surfaceMin: z.coerce.number().optional(),
+  surfaceMax: z.coerce.number().optional(),
+  landMin: z.coerce.number().optional(),
+  landMax: z.coerce.number().optional(),
+  dpe: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(5000).default(1000),
 });
 
@@ -29,6 +34,11 @@ export async function mapRoutes(app: FastifyInstance) {
     if (q.type) { params.push(q.type); where.push(`type_local = $${params.length}`); }
     if (q.from) { params.push(q.from); where.push(`date_mutation >= $${params.length}`); }
     if (q.to)   { params.push(q.to);   where.push(`date_mutation <= $${params.length}`); }
+    if (q.surfaceMin != null) { params.push(q.surfaceMin); where.push(`surface_bati >= $${params.length}`); }
+    if (q.surfaceMax != null) { params.push(q.surfaceMax); where.push(`surface_bati <= $${params.length}`); }
+    if (q.landMin != null) { params.push(q.landMin); where.push(`surface_terrain >= $${params.length}`); }
+    if (q.landMax != null) { params.push(q.landMax); where.push(`surface_terrain <= $${params.length}`); }
+    if (q.dpe) { params.push(q.dpe); where.push(`td.etiquette_dpe = $${params.length}`); }
     params.push(q.limit);
 
     const rows = await query<{

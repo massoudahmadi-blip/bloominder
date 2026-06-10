@@ -11,6 +11,11 @@ function filterParams(f: Filters): string {
   if (f.maxPrice != null) p.set('maxPrice', String(f.maxPrice));
   if (f.from) p.set('from', f.from);
   if (f.to) p.set('to', f.to);
+  if (f.minSurface != null) p.set('surfaceMin', String(f.minSurface));
+  if (f.maxSurface != null) p.set('surfaceMax', String(f.maxSurface));
+  if (f.minLand != null) p.set('landMin', String(f.minLand));
+  if (f.maxLand != null) p.set('landMax', String(f.maxLand));
+  if (f.dpe) p.set('dpe', f.dpe);
   return p.toString();
 }
 

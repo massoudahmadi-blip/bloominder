@@ -34,6 +34,11 @@ export interface Filters {
   maxPrice?: number;
   from?: string; // ISO date
   to?: string;
+  minSurface?: number;
+  maxSurface?: number;
+  minLand?: number;
+  maxLand?: number;
+  dpe?: string; // energy class A–G
 }
 
 export interface YearTrend {

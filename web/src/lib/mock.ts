@@ -95,6 +95,11 @@ function passesFilters(s: Sale, f: Filters): boolean {
   if (f.maxPrice != null && s.prix > f.maxPrice) return false;
   if (f.from && s.date < f.from) return false;
   if (f.to && s.date > f.to) return false;
+  if (f.minSurface != null && (s.surface_bati ?? 0) < f.minSurface) return false;
+  if (f.maxSurface != null && (s.surface_bati ?? Infinity) > f.maxSurface) return false;
+  if (f.minLand != null && (s.surface_terrain ?? 0) < f.minLand) return false;
+  if (f.maxLand != null && (s.surface_terrain ?? Infinity) > f.maxLand) return false;
+  if (f.dpe && s.dpe !== f.dpe) return false;
   return true;
 }
 
