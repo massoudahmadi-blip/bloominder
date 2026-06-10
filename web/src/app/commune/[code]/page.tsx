@@ -143,6 +143,21 @@ export default function CommunePage() {
               )}
             </section>
 
+            {/* Short-term rental (Airbnb) — covered cities only */}
+            {data.airbnb && data.airbnb.listings > 0 && (
+              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.shortLet}</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  <Kpi label={t.slListings} value={data.airbnb.listings.toLocaleString('fr-FR')} />
+                  <Kpi label={t.slNightly} value={data.airbnb.median_nightly != null ? formatEUR(data.airbnb.median_nightly, locale) : '—'} accent />
+                  <Kpi label={t.slEntire} value={data.airbnb.pct_entire != null ? `${data.airbnb.pct_entire}%` : '—'} />
+                  <Kpi label={t.slOccupancy} value={data.airbnb.median_occupancy != null ? `${data.airbnb.median_occupancy}%` : '—'} />
+                  <Kpi label={t.slRevenue} value={data.airbnb.median_revenue_year != null ? formatEUR(data.airbnb.median_revenue_year, locale) : '—'} />
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400">{t.slNote}</p>
+              </section>
+            )}
+
             {/* Transactions drill-down */}
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">

@@ -69,6 +69,34 @@ CREATE TABLE IF NOT EXISTS transaction_dpe (
 );
 CREATE INDEX IF NOT EXISTS transaction_dpe_label_idx ON transaction_dpe (etiquette_dpe);
 
+-- Short-term rentals (Inside Airbnb, covered cities only).
+CREATE TABLE IF NOT EXISTS airbnb_listings (
+  id              bigint PRIMARY KEY,
+  code_commune    text,
+  room_type       text,
+  price           numeric,     -- nightly €
+  min_nights      int,
+  n_reviews       int,
+  reviews_per_month numeric,
+  availability_365  int,
+  neighbourhood   text,
+  license         text,
+  longitude       double precision,
+  latitude        double precision
+);
+CREATE INDEX IF NOT EXISTS airbnb_commune_idx ON airbnb_listings (code_commune);
+
+-- Per-commune short-let summary (estimated; Inside Airbnb "reviews" occupancy proxy).
+CREATE TABLE IF NOT EXISTS commune_airbnb (
+  code_commune        text PRIMARY KEY,
+  listings            int,
+  median_nightly      numeric,   -- entire home/apt
+  pct_entire          numeric,
+  median_occupancy    numeric,   -- % (estimated)
+  median_revenue_year numeric,   -- € (estimated)
+  updated_at          timestamptz DEFAULT now()
+);
+
 -- Local tax rates per commune (DGFiP "fiscalité locale des particuliers", REI).
 CREATE TABLE IF NOT EXISTS commune_tax (
   code_commune  text PRIMARY KEY,

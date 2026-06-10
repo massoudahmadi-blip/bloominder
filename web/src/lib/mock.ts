@@ -140,6 +140,7 @@ export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'):
       pct_passoire: 11 + i * 2,
       resale_gain: 22 - i * 3,
       taxe_fonciere: Math.round((28 + i * 3) * 10) / 10,
+      airbnb_nightly: i < 3 ? 90 + i * 25 : null,
     };
   });
   const key = (sort ?? 'score_global') as keyof CommuneRow;
@@ -183,6 +184,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
     demo: { population: 52000, pop_growth: null, median_income: null },
     tax: { taux_tfb: 34.2, taux_th: 18.5, thrs_major: null },
+    airbnb: { listings: 640, median_nightly: 110, pct_entire: 72.5, median_occupancy: 48, median_revenue_year: 14800 },
     valeur_verte: [
       { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },
       { classe: 'C', ventes: 110, median_eur_m2: Math.round(med * 1.05) },

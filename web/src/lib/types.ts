@@ -61,6 +61,7 @@ export interface CommuneRow {
   pct_passoire: number | null;
   resale_gain: number | null;
   taxe_fonciere: number | null;
+  airbnb_nightly: number | null;
 }
 
 export type ScreenerSort =
@@ -106,5 +107,12 @@ export interface CommuneProfile {
   dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
   demo: { population: number | null; pop_growth: number | null; median_income: number | null } | null;
   tax: { taux_tfb: number | null; taux_th: number | null; thrs_major: string | null } | null;
+  airbnb: {
+    listings: number;
+    median_nightly: number | null;
+    pct_entire: number | null;
+    median_occupancy: number | null;
+    median_revenue_year: number | null;
+  } | null;
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }
