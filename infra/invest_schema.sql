@@ -42,6 +42,19 @@ CREATE TABLE IF NOT EXISTS commune_scores (
 CREATE INDEX IF NOT EXISTS commune_metrics_dep_idx  ON commune_metrics (code_departement);
 CREATE INDEX IF NOT EXISTS commune_scores_global_idx ON commune_scores (score_global DESC);
 
+-- Report v2 additions to commune_metrics (added in-place for existing DBs).
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS p25_prix_m2 numeric;
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS p75_prix_m2 numeric;
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS median_days_to_sell int;  -- DPE→deed liquidity
+
+-- Benchmarks for peer comparison (national + per-department median €/m²).
+CREATE TABLE IF NOT EXISTS benchmark (
+  scope          text,   -- 'FR' or 'DEP'
+  code           text,   -- 'FR' or department code
+  median_prix_m2 numeric,
+  PRIMARY KEY (scope, code)
+);
+
 -- ---------------------------------------------------------------------------
 -- DPE energy diagnostics (ADEME "dpe03existant", since July 2021).
 -- ---------------------------------------------------------------------------

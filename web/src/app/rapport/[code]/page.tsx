@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getCommune, getTrend } from '@/lib/api';
-import { CommuneProfile, YearTrend } from '@/lib/types';
-import { formatEUR } from '@/lib/format';
+import { getCommune, getTrend, getCommuneTransactions } from '@/lib/api';
+import { CommuneProfile, YearTrend, Sale } from '@/lib/types';
+import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
 import { TrendChart } from '@/components/TrendChart';
@@ -19,6 +19,7 @@ export default function ReportPage() {
   const code = String(useParams().code);
   const [data, setData] = useState<CommuneProfile | null>(null);
   const [trend, setTrend] = useState<YearTrend[]>([]);
+  const [recent, setRecent] = useState<Sale[]>([]);
   const [brand, setBrand] = useState('Bloominder');
   const [loading, setLoading] = useState(true);
 
@@ -32,14 +33,31 @@ export default function ReportPage() {
     setLoading(true);
     getCommune(code).then((d) => !off && setData(d)).catch(() => !off && setData(null)).finally(() => !off && setLoading(false));
     getTrend(code).then((tr) => !off && setTrend(tr)).catch(() => {});
+    getCommuneTransactions(code, 1).then((r) => !off && setRecent(r.results.slice(0, 8))).catch(() => {});
     return () => { off = true; };
   }, [code]);
+
+  const median = (xs: number[]) => { const a = xs.filter((n) => n != null).sort((p, q) => p - q); return a.length ? a[Math.floor(a.length / 2)] : null; };
 
   const m = data?.metrics;
   const s = data?.scores;
   const vv = (data?.valeur_verte ?? []).filter((x) => x.median_eur_m2 != null).sort((a, b) => ORDER.indexOf(a.classe) - ORDER.indexOf(b.classe));
   const vvMax = Math.max(1, ...vv.map((x) => x.median_eur_m2 as number));
   const today = new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB');
+
+  const clauses: string[] = [];
+  if (s) {
+    if (s.score_yield != null) clauses.push(s.score_yield >= 66 ? t.narYieldHi : s.score_yield >= 33 ? t.narYieldMid : t.narYieldLo);
+    if (s.score_growth != null) clauses.push(s.score_growth >= 50 ? t.narGrowthHi : t.narGrowthLo);
+    if (s.score_demand != null) clauses.push(s.score_demand >= 50 ? t.narDemandHi : t.narDemandLo);
+  }
+  if (data?.dpe?.pct_passoire != null) clauses.push(data.dpe.pct_passoire >= 25 ? t.narPassoireHi : t.narPassoireLo);
+  const narrative = clauses.join(' · ');
+
+  const medGood = median(vv.filter((x) => ['A', 'B', 'C'].includes(x.classe)).map((x) => x.median_eur_m2 as number));
+  const medBad = median(vv.filter((x) => ['F', 'G'].includes(x.classe)).map((x) => x.median_eur_m2 as number));
+  const renoUplift = medGood != null && medBad ? Math.round(((medGood - medBad) / medBad) * 100) : null;
+  const peerMax = Math.max(m?.median_prix_m2 ?? 0, data?.benchmark?.dept ?? 0, data?.benchmark?.fr ?? 0, 1);
 
   return (
     <div className="min-h-[100dvh] bg-slate-100 py-6">
@@ -76,16 +94,44 @@ export default function ReportPage() {
             </div>
           </div>
 
+          {/* Investor narrative */}
+          {narrative && (
+            <div className="report-card rounded-2xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-slate-700">
+              <span className="font-semibold text-brand-800">{m.nom_commune}</span> — {narrative}.
+            </div>
+          )}
+
           {/* Market */}
           <Card title={t.secMarketR}>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Kpi label={t.kpiPriceAppt} value={m.median_prix_m2_appartement ? formatEUR(m.median_prix_m2_appartement, locale) : '—'} />
               <Kpi label={t.kpiPriceMaison} value={m.median_prix_m2_maison ? formatEUR(m.median_prix_m2_maison, locale) : '—'} />
               <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_3y != null ? `${m.prix_m2_growth_3y > 0 ? '+' : ''}${m.prix_m2_growth_3y}%` : '—'} />
+              <Kpi label={t.kpiLiquidity} value={m.median_days_to_sell != null ? `${m.median_days_to_sell} ${t.daysShort}` : '—'} />
+              <Kpi label={t.kpiVolatility} value={m.p25_prix_m2 != null && m.p75_prix_m2 != null ? `${formatEUR(m.p25_prix_m2, locale)}–${formatEUR(m.p75_prix_m2, locale)}` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </div>
             {trend.length >= 2 && <div className="mt-4 rounded-xl border border-slate-100 p-3"><TrendChart data={trend} /></div>}
           </Card>
+
+          {/* Peer comparison */}
+          {(data.benchmark.dept || data.benchmark.fr) && m.median_prix_m2 != null && (
+            <Card title={t.peerTitle}>
+              {[
+                { label: m.nom_commune, v: m.median_prix_m2, c: '#0d9488' },
+                { label: t.peerDept, v: data.benchmark.dept, c: '#94a3b8' },
+                { label: t.peerFr, v: data.benchmark.fr, c: '#cbd5e1' },
+              ].map((row) => (
+                <div key={row.label} className="mb-2 flex items-center gap-3 text-sm">
+                  <span className="w-28 shrink-0 truncate text-slate-500">{row.label}</span>
+                  <div className="h-5 flex-1 rounded bg-slate-100">
+                    <div className="h-5 rounded" style={{ width: `${((row.v ?? 0) / peerMax) * 100}%`, background: row.c }} />
+                  </div>
+                  <span className="w-20 shrink-0 text-right font-medium tabular-nums">{row.v != null ? formatEUR(row.v, locale) : '—'}</span>
+                </div>
+              ))}
+            </Card>
+          )}
 
           {/* Rental yield + short-let */}
           <Card title={t.secRentalR}>
@@ -130,7 +176,53 @@ export default function ReportPage() {
             </div>
           </Card>
 
-          <p className="report-card px-2 text-[10px] leading-snug text-slate-400">{t.reportDisclaimer}</p>
+          {/* Rental-ban timeline & renovation upside */}
+          {(data.dpe?.pct_passoire != null || (renoUplift != null && renoUplift > 0)) && (
+            <Card title={t.banTitle}>
+              <p className="text-sm text-slate-600">{t.banText}</p>
+              {data.dpe?.pct_passoire != null && (
+                <p className="mt-2 text-sm">{t.passoireLbl}: <b className="text-rose-600">{data.dpe.pct_passoire}%</b></p>
+              )}
+              {renoUplift != null && renoUplift > 0 && (
+                <p className="mt-1 text-sm">{t.renoUpside}: <b className="text-emerald-600">+{renoUplift}%</b></p>
+              )}
+            </Card>
+          )}
+
+          {/* Recent sales */}
+          {recent.length > 0 && (
+            <Card title={t.recentSales}>
+              <table className="w-full text-sm">
+                <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-2 py-1.5 text-left font-medium">{t.colDate}</th>
+                    <th className="px-2 py-1.5 text-left font-medium">{t.colType}</th>
+                    <th className="px-2 py-1.5 text-right font-medium">{t.surface}</th>
+                    <th className="px-2 py-1.5 text-right font-medium">{t.colPriceM2}</th>
+                    <th className="px-2 py-1.5 text-right font-medium">{t.colPrice}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {recent.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-2 py-1.5 text-slate-500">{formatDate(r.date, locale)}</td>
+                      <td className="px-2 py-1.5">{r.type ? ((t as any)[r.type] ?? r.type) : '—'}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{r.surface_bati != null ? formatM2(r.surface_bati) : '—'}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{r.prix_m2 != null ? formatPriceM2(r.prix_m2, locale) : '—'}</td>
+                      <td className="px-2 py-1.5 text-right font-medium tabular-nums">{formatEUR(r.prix, locale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {/* Methodology & sources */}
+          <Card title={t.methodology}>
+            <p className="text-xs text-slate-500">DVF (DGFiP/Etalab) · DPE (ADEME) · Carte des loyers · INSEE · DGFiP fiscalité · Inside Airbnb · BAN.</p>
+            <p className="mt-2 text-[10px] leading-snug text-slate-400">{t.reportDisclaimer}</p>
+            <p className="mt-1 text-[10px] text-slate-400">{t.generatedOn} {today} · {brand}</p>
+          </Card>
         </div>
       )}
     </div>

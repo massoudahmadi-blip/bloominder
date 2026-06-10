@@ -179,6 +179,9 @@ export function mockCommune(code: string): CommuneProfile | null {
       loyer_m2_maison: Math.round(rent * 0.85 * 100) / 100,
       rendement_brut_appartement: yld,
       rendement_brut_maison: Math.round(yld * 0.9 * 10) / 10,
+      p25_prix_m2: Math.round(med * 0.8),
+      p75_prix_m2: Math.round(med * 1.25),
+      median_days_to_sell: 92,
     },
     scores: { score_yield: 72, score_growth: 64, score_demand: 70, score_global: 69 },
     dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
@@ -186,6 +189,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     demo: { population: 52000, pop_growth: null, median_income: null },
     tax: { taux_tfb: 34.2, taux_th: 18.5, thrs_major: null },
     airbnb: { listings: 640, median_nightly: 110, pct_entire: 72.5, median_occupancy: 48, median_revenue_year: 14800 },
+    benchmark: { dept: Math.round(med * 0.92), fr: 3100 },
     valeur_verte: [
       { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },
       { classe: 'C', ventes: 110, median_eur_m2: Math.round(med * 1.05) },

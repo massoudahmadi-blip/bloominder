@@ -37,6 +37,8 @@ agg AS (
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS med_all,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Appartement') AS med_app,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000 AND type_local='Maison') AS med_mai,
+    percentile_cont(0.25) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p25,
+    percentile_cont(0.75) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p75,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
       WHERE prix_m2 BETWEEN 400 AND 25000 AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS med_now,
     percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (
@@ -48,7 +50,8 @@ agg AS (
 )
 INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_total,ventes_12m,
   median_prix_m2,median_prix_m2_appartement,median_prix_m2_maison,prix_m2_growth_3y,
-  loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison)
+  loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison,
+  p25_prix_m2,p75_prix_m2)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
   CASE WHEN a.med_3y > 0
@@ -60,10 +63,34 @@ SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.vent
        THEN round((rc.loyer_m2_appartement * 12 / a.med_app * 100)::numeric, 2) END,
   CASE WHEN a.med_mai > 0 AND rc.loyer_m2_maison IS NOT NULL
         AND (rc.loyer_m2_maison * 12 / a.med_mai * 100) <= 25
-       THEN round((rc.loyer_m2_maison * 12 / a.med_mai * 100)::numeric, 2) END
+       THEN round((rc.loyer_m2_maison * 12 / a.med_mai * 100)::numeric, 2) END,
+  round(a.p25), round(a.p75)
 FROM agg a
 LEFT JOIN rents_commune rc ON rc.code_commune = a.code_commune
 WHERE a.ventes_total >= 5;
+
+-- Liquidity: median days from DPE establishment to sale (DPE→deed).
+UPDATE commune_metrics m SET median_days_to_sell = q.d
+FROM (
+  SELECT t.code_commune,
+         round(percentile_cont(0.5) WITHIN GROUP (ORDER BY (t.date_mutation - d.date_dpe)))::int AS d
+  FROM transaction_dpe td
+  JOIN transactions t ON t.id = td.transaction_id
+  JOIN dpe d ON d.numero_dpe = td.numero_dpe
+  WHERE d.date_dpe IS NOT NULL AND t.date_mutation > d.date_dpe
+    AND (t.date_mutation - d.date_dpe) BETWEEN 1 AND 730
+  GROUP BY t.code_commune
+) q WHERE q.code_commune = m.code_commune;
+
+-- Peer benchmarks: national + per-department median €/m².
+TRUNCATE benchmark;
+INSERT INTO benchmark(scope,code,median_prix_m2)
+SELECT 'FR','FR', round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2))
+FROM transactions WHERE prix_m2 BETWEEN 400 AND 25000;
+INSERT INTO benchmark(scope,code,median_prix_m2)
+SELECT 'DEP', code_departement, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2))
+FROM transactions WHERE prix_m2 BETWEEN 400 AND 25000 AND code_departement IS NOT NULL
+GROUP BY code_departement;
 SQL
 
 echo ">> Computing commune_scores (default weights: yield .45 / growth .35 / demand .20)..."

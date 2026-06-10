@@ -97,6 +97,9 @@ export interface CommuneProfile {
     loyer_m2_maison: number | null;
     rendement_brut_appartement: number | null;
     rendement_brut_maison: number | null;
+    p25_prix_m2: number | null;
+    p75_prix_m2: number | null;
+    median_days_to_sell: number | null;
   };
   scores: {
     score_yield: number | null;
@@ -115,5 +118,6 @@ export interface CommuneProfile {
     median_occupancy: number | null;
     median_revenue_year: number | null;
   } | null;
+  benchmark: { dept: number | null; fr: number | null };
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }
