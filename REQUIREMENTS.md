@@ -45,7 +45,10 @@ demand signals, growth trends, cross-city ranking, or investor reports. That is 
 | Short-term lets | **Inside Airbnb** (public, major cities) | listings, nightly price, occupancy proxy, regulation | ~monthly |
 | Demographics/economy | **INSEE** (population, Filosofi income, employment, tenure) | demand fundamentals & growth | yearly |
 | Supply pipeline | **Sit@del2** (building permits), **LOVAC** (vacancy) | supply/demand signal | yearly |
+| **Local taxes** | **DGFiP fiscalité directe locale** (REI) | taxe foncière (TFPB) + taxe d'habitation résidences secondaires (THRS) rates → yield calculator + "tax burden by city" | yearly |
 | Livability / risk | schools (Éduc. Nat.), transport (GTFS/IGN), crime (SSMSI), energy (**DPE**/ADEME), flood/risk (**Géorisques**), POIs (OSM) | "avantages / inconvénients" | varies |
+| **Local context: risks** | **Géorisques** (ICPE/SEVESO industrial sites, waste/incineration), **BASOL/BASIAS** (polluted soils) | negative catalysts (pollution, nuisances) near a property/commune | yearly |
+| **Local context: catalysts** | large **building permits** (Sit@del2), transit projects, new schools/employers; **news feed** (Google News RSS) + LLM classification | positive/negative local "events" (new station, mall, factory, company arrival/closure) explaining potential | continuous |
 | Geocoding / addresses | **BAN** | address autocomplete + lat/lon | continuous |
 | Map tiles | CARTO (now) → IGN Géoplateforme | basemap | — |
 
@@ -65,6 +68,8 @@ Each analyzed market gets a profile, **drillable: commune → neighborhood (INSE
 **Demand & demographics** — population + 5-yr growth, median income, owners vs renters, students, employment.
 **Supply pipeline** — building permits trend, vacancy rate.
 **Livability ("avantages / inconvénients")** — schools, transport access, crime, energy/DPE, flood-&-risk zones, plus **proximity to coast, universities, hospitals, beaches/ski, fiber/broadband**, amenities.
+**Local tax burden** — taxe foncière (TFPB) rate + THRS rate (secondary residences / short-let), compared across cities and fed into the yield/deal calculator.
+**Local context — catalysts & risks** — nearby/incoming projects that move value: ✅ positive (new train station/transit, mall, amusement park, school, university, hospital, major employer arriving, big developments via permits) and ⚠️ negative (polluting/SEVESO industry, waste/incineration plant, flood/risk zones, company closures). Structured from Géorisques/permits + a news feed (LLM-classified) per commune.
 
 ---
 
