@@ -4,6 +4,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatEUR } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 
+function remainingBalance(loan: number, mr: number, nTotal: number, nPaid: number): number {
+  if (nPaid >= nTotal) return 0;
+  if (mr === 0) return loan * (1 - nPaid / nTotal);
+  return loan * ((Math.pow(1 + mr, nTotal) - Math.pow(1 + mr, nPaid)) / (Math.pow(1 + mr, nTotal) - 1));
+}
+
+function irr(cfs: number[]): number | null {
+  const npv = (rate: number) => cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + rate, i), 0);
+  let lo = -0.9, hi = 1, flo = npv(lo);
+  if (flo * npv(hi) > 0) return null;
+  for (let k = 0; k < 100; k++) {
+    const mid = (lo + hi) / 2, f = npv(mid);
+    if (Math.abs(f) < 1) return mid;
+    if (flo * f < 0) hi = mid; else { lo = mid; flo = f; }
+  }
+  return (lo + hi) / 2;
+}
+
 export default function CalculatorPage() {
   const { t, locale, setLocale } = useI18n();
 
@@ -24,6 +42,13 @@ export default function CalculatorPage() {
   const [down, setDown] = useState(30000);
   const [rate, setRate] = useState(3.5);
   const [term, setTerm] = useState(20);
+  // Projection & tax
+  const [holdYears, setHoldYears] = useState(10);
+  const [rentGrowth, setRentGrowth] = useState(1.5);
+  const [appreciation, setAppreciation] = useState(1.5);
+  const [sellCosts, setSellCosts] = useState(6);
+  const [tmi, setTmi] = useState(30);
+  const [regime, setRegime] = useState<'nu' | 'lmnp'>('nu');
 
   // Pre-fill from a city profile link: /calculateur?prix=...&loyer=...
   useEffect(() => {
@@ -51,6 +76,34 @@ export default function CalculatorPage() {
     const coc = cashInvested > 0 ? (cashflowM * 12) / cashInvested * 100 : 0;
     return { notaire, total, loan, payment, monthlyCharges, cashflowM, grossYield, netYield, coc };
   }, [price, notairePct, works, furnishing, rent, taxe, copro, mgmtPct, insurance, vacancyPct, down, rate, term]);
+
+  const proj = useMemo(() => {
+    const mr = rate / 100 / 12;
+    const nTotal = term * 12;
+    const annualPayment = r.payment * 12;
+    const abatement = regime === 'lmnp' ? 0.5 : 0.3;
+    const taxRate = tmi / 100 + 0.172; // marginal income tax + social levies
+    const cfs: number[] = [-down];
+    let rentM = rent;
+    for (let y = 1; y <= holdYears; y++) {
+      const annualRent = rentM * 12;
+      const noi = annualRent - r.monthlyCharges * 12;
+      const tax = Math.max(0, annualRent * (1 - abatement)) * taxRate;
+      let cf = noi - annualPayment - tax;
+      if (y === holdYears) {
+        const saleNet = price * Math.pow(1 + appreciation / 100, holdYears) * (1 - sellCosts / 100);
+        cf += saleNet - remainingBalance(r.loan, mr, nTotal, holdYears * 12);
+      }
+      cfs.push(cf);
+      rentM *= 1 + rentGrowth / 100;
+    }
+    const irrDec = irr(cfs);
+    const exitValue = price * Math.pow(1 + appreciation / 100, holdYears);
+    const totalProfit = cfs.reduce((s, c) => s + c, 0);
+    const y1Tax = Math.max(0, rent * 12 * (1 - abatement)) * taxRate;
+    const netCfM = (rent * 12 - r.monthlyCharges * 12 - annualPayment - y1Tax) / 12;
+    return { irrPct: irrDec != null ? irrDec * 100 : null, exitValue, totalProfit, netCfM };
+  }, [r, price, rent, rate, term, down, holdYears, rentGrowth, appreciation, sellCosts, tmi, regime]);
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
@@ -106,6 +159,21 @@ export default function CalculatorPage() {
               <Num label={t.fRate} value={rate} onChange={setRate} suffix="%" step={0.1} />
               <Num label={t.fTerm} value={term} onChange={setTerm} suffix="ans" />
             </Section>
+            <Section title={t.secProjection}>
+              <Num label={t.fHolding} value={holdYears} onChange={setHoldYears} suffix="ans" />
+              <Num label={t.fRentGrowth} value={rentGrowth} onChange={setRentGrowth} suffix="%" step={0.1} />
+              <Num label={t.fAppreciation} value={appreciation} onChange={setAppreciation} suffix="%" step={0.1} />
+              <Num label={t.fSellingCosts} value={sellCosts} onChange={setSellCosts} suffix="%" step={0.5} />
+              <Num label={t.fTMI} value={tmi} onChange={setTmi} suffix="%" step={1} />
+              <label className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium text-slate-500">{t.fRegime}</span>
+                <select value={regime} onChange={(e) => setRegime(e.target.value as 'nu' | 'lmnp')}
+                  className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-brand-400">
+                  <option value="nu">{t.regimeNu}</option>
+                  <option value="lmnp">{t.regimeLMNP}</option>
+                </select>
+              </label>
+            </Section>
           </div>
 
           {/* Results */}
@@ -133,6 +201,12 @@ export default function CalculatorPage() {
                   <span>{formatEUR(Math.round(r.cashflowM * 12), locale)}</span>
                 </div>
               </div>
+
+              <div className="my-2 border-t border-slate-100" />
+              <Row label={t.rNetCashflowM} value={formatEUR(Math.round(proj.netCfM), locale)} />
+              <Row label={t.rExitValue} value={formatEUR(Math.round(proj.exitValue), locale)} />
+              <Row label={t.rTotalProfit} value={formatEUR(Math.round(proj.totalProfit), locale)} strong />
+              <Row label={`${t.rIRR} · ${holdYears}a`} value={proj.irrPct != null ? `${proj.irrPct.toFixed(1)}%` : '—'} strong />
             </div>
           </div>
         </div>
