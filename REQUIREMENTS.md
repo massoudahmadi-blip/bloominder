@@ -43,7 +43,7 @@ demand signals, growth trends, cross-city ranking, or investor reports. That is 
 | Sold prices (aggregated) | **CEREMA DVF+** (commune level) | ready-made commune benchmarks | ~yearly |
 | Long-term rents | **Carte des loyers** (gouv/ANIL) | indicative rent €/m² → **yield** | ~yearly |
 | Short-term lets | **Inside Airbnb** (public, major cities) | listings, nightly price, occupancy proxy, regulation | ~monthly |
-| Demographics/economy | **INSEE** (population, Filosofi income, employment, tenure) | demand fundamentals & growth | yearly |
+| Demographics/economy | **INSEE** — Geo API (population, ✅ done) + **census "base communale"** (age groups, socio-professional categories/CSP, tenure owners-vs-renters, **% social housing/HLM** via RPLS, **% secondary residences**, education, employment) + **Filosofi** (median income) | demand fundamentals, growth, social profile of a market | yearly |
 | Supply pipeline | **Sit@del2** (building permits), **LOVAC** (vacancy) | supply/demand signal | yearly |
 | **Local taxes** | **DGFiP fiscalité directe locale** (REI) | taxe foncière (TFPB) + taxe d'habitation résidences secondaires (THRS) rates → yield calculator + "tax burden by city" | yearly |
 | Livability / risk | schools (Éduc. Nat.), transport (GTFS/IGN), crime (SSMSI), energy (**DPE**/ADEME), flood/risk (**Géorisques**), POIs (OSM) | "avantages / inconvénients" | varies |
@@ -63,9 +63,10 @@ Known data gap persists: **no DVF for Alsace, Moselle, Mayotte.**
 Each analyzed market gets a profile, **drillable: commune → neighborhood (INSEE IRIS) → address.**
 
 **Prices & sales** — median €/m² (house/apt), 1/3/5-yr growth, transaction volume & velocity, price dispersion.
+**Repeat-sales appreciation** — when the *same property* (same cadastral parcel) sold more than once, the **realized % gain between sales** + annualized rate + years held. Shown on the property detail/map popup ("sold +X% since 20YY") and aggregated as a commune metric (median realized resale gain) + on the screener. Derived from DVF parcels — no new data source. Caveat: cross-period matching depends on parcel-id consistency; flagged as indicative.
 **Long-term rental** — indicative rent €/m², **gross & net yield**, rental tension.
 **Short-let** — active listings, median nightly rate, est. occupancy/RevPAR, **regulation flags** (e.g. Paris 120-night limit, registration/`changement d'usage`).
-**Demand & demographics** — population + 5-yr growth, median income, owners vs renters, students, employment.
+**Demand & demographics** — population (✅) + 5-yr growth, median income, **age structure** (groupes d'âge), **socio-professional mix (CSP)**, **% social housing (HLM)**, **% secondary residences**, tenure (owners vs renters), students, employment.
 **Supply pipeline** — building permits trend, vacancy rate.
 **Livability ("avantages / inconvénients")** — schools, transport access, crime, energy/DPE, flood-&-risk zones, plus **proximity to coast, universities, hospitals, beaches/ski, fiber/broadband**, amenities.
 **Local tax burden** — taxe foncière (TFPB) rate + THRS rate (secondary residences / short-let), compared across cities and fed into the yield/deal calculator.

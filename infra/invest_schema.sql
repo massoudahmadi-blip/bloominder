@@ -69,6 +69,22 @@ CREATE TABLE IF NOT EXISTS transaction_dpe (
 );
 CREATE INDEX IF NOT EXISTS transaction_dpe_label_idx ON transaction_dpe (etiquette_dpe);
 
+-- Repeat sales: a transaction that is a resale of the same parcel (realized gain).
+CREATE TABLE IF NOT EXISTS transaction_resale (
+  transaction_id  bigint PRIMARY KEY REFERENCES transactions(id) ON DELETE CASCADE,
+  prev_date       date,
+  prev_prix       numeric,
+  change_pct      numeric,
+  years_held      numeric,
+  annualized_pct  numeric
+);
+CREATE TABLE IF NOT EXISTS commune_resale (
+  code_commune       text PRIMARY KEY,
+  resales            int,
+  median_gain_pct    numeric,
+  median_annualized  numeric
+);
+
 -- Per-commune demographics (INSEE). population now; growth + income to follow.
 CREATE TABLE IF NOT EXISTS commune_demo (
   code_commune      text PRIMARY KEY,
