@@ -166,6 +166,16 @@ attribution, Inside Airbnb licensing/attribution, **no direct portal/Airbnb scra
 
 ---
 
+## 11b. Report enhancement backlog (banker / investor / buyer)
+
+Goal: an "astonishing" report. Marked (have)=from current data, (new)=needs an ingest.
+- **Banker:** AVM valuation + confidence + comps (have); market liquidity / délai-de-vente from DPE→sale date (have); price volatility/dispersion (have); DSCR + LTV + amortization + rate stress test (have); environmental risk register / ERP — flood, clay shrink-swell, seismic, radon, SEVESO, polluted soil (new: Géorisques); energy rental-ban timeline G2025/F2028/E2034 (have: DPE).
+- **Investor:** in-report cash-flow + 10-yr projection/IRR + scenario & sensitivity (have); realized appreciation + trend (have); short-let deep-dive + Airbnb regulation 120-night/changement d'usage (have+rules); renovation/flip thesis + valeur-verte gap + MaPrimeRénov (have+rules); fiscal sim LMNP/LMP, micro vs réel, Pinel/Denormandie/déficit foncier, plus-value resale tax (new: rules/logic); rent control / encadrement zones (new: list); supply pipeline permits+vacancy (new: Sit@del2/LOVAC).
+- **Buyer:** fair-price verdict + €/m² percentile (have); livability — schools+IPS, transport, crime, healthcare, amenities, fiber (new: ÉducNat/GTFS/SSMSI/FINESS/OSM/ARCEP); demographics depth + income + affordability/price-to-income (new: richer INSEE+Filosofi); env risks (new: Géorisques).
+- **Wow:** LLM-written investment thesis; peer comparison city vs dept vs national vs similar cities (have); maps in report incl cadastral parcel + land area (new: cadastre); methodology & data-freshness page (have).
+
+Recommended sequencing: **Report v2 from existing data first** (comps, liquidity, volatility, peer comparison, rental-ban timeline + reno upside, financing/DSCR summary, auto-narrative, methodology) → then new open-data layers (Géorisques risks, livability, richer INSEE/income, supply, rent control, fiscal sim, cadastre).
+
 ## 11. Open items to confirm
 - Pricing tiers/amounts, trial length, annual discount (defaults in §6).
 - Competitor tools the owner wants benchmarked (send links).
