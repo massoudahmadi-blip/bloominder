@@ -1,4 +1,4 @@
-import type { Sale, PropertyType, BBox, Filters, YearTrend, CommuneRow, ScreenerSort } from './types';
+import type { Sale, PropertyType, BBox, Filters, YearTrend, CommuneRow, ScreenerSort, CommuneProfile } from './types';
 
 // Deterministic pseudo-random so the demo looks the same every reload.
 function mulberry32(seed: number) {
@@ -142,6 +142,40 @@ export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'):
     return dir === 'asc' ? av - bv : bv - av;
   });
   return rows;
+}
+
+export function mockCommune(code: string): CommuneProfile | null {
+  const c = COMMUNES.find((x) => x.code === code) ?? COMMUNES[0];
+  const med = c.base;
+  const rent = Math.round(med * 0.0042 * 100) / 100;
+  const yld = Math.round((rent * 12) / med * 1000) / 10;
+  return {
+    metrics: {
+      code_commune: c.code,
+      nom_commune: c.nom,
+      code_departement: c.code.slice(0, 2),
+      ventes_total: 320,
+      ventes_12m: 64,
+      median_prix_m2: med,
+      median_prix_m2_appartement: med,
+      median_prix_m2_maison: Math.round(med * 0.95),
+      prix_m2_growth_3y: 14,
+      loyer_m2_appartement: rent,
+      loyer_m2_maison: Math.round(rent * 0.85 * 100) / 100,
+      rendement_brut_appartement: yld,
+      rendement_brut_maison: Math.round(yld * 0.9 * 10) / 10,
+    },
+    scores: { score_yield: 72, score_growth: 64, score_demand: 70, score_global: 69 },
+    dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
+    valeur_verte: [
+      { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },
+      { classe: 'C', ventes: 110, median_eur_m2: Math.round(med * 1.05) },
+      { classe: 'D', ventes: 180, median_eur_m2: med },
+      { classe: 'E', ventes: 130, median_eur_m2: Math.round(med * 0.94) },
+      { classe: 'F', ventes: 70, median_eur_m2: Math.round(med * 0.88) },
+      { classe: 'G', ventes: 35, median_eur_m2: Math.round(med * 0.82) },
+    ],
+  };
 }
 
 export function mockTrend(codeCommune?: string, type?: string | null): YearTrend[] {

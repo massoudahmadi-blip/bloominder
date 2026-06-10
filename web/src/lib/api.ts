@@ -1,5 +1,5 @@
-import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams } from './types';
-import { mockSalesInView, mockComparables, mockTrend, mockScreener } from './mock';
+import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile } from './types';
+import { mockSalesInView, mockComparables, mockTrend, mockScreener, mockCommune } from './mock';
 
 const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
 export const USING_MOCK = API === '';
@@ -91,6 +91,15 @@ export async function getScreener(p: ScreenerParams): Promise<ScreenerResult> {
   sp.set('pageSize', String(p.pageSize ?? 25));
   const res = await fetch(`${API}/api/screener?${sp.toString()}`);
   if (!res.ok) throw new Error(`screener ${res.status}`);
+  return res.json();
+}
+
+/** Full city profile for the drill-down page. Returns null if the commune isn't found. */
+export async function getCommune(code: string): Promise<CommuneProfile | null> {
+  if (USING_MOCK) return mockCommune(code);
+  const res = await fetch(`${API}/api/commune/${encodeURIComponent(code)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`commune ${res.status}`);
   return res.json();
 }
 

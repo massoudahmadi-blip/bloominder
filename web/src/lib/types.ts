@@ -75,3 +75,29 @@ export interface ScreenerParams {
   page?: number;
   pageSize?: number;
 }
+
+export interface CommuneProfile {
+  metrics: {
+    code_commune: string;
+    nom_commune: string;
+    code_departement: string;
+    ventes_total: number;
+    ventes_12m: number | null;
+    median_prix_m2: number | null;
+    median_prix_m2_appartement: number | null;
+    median_prix_m2_maison: number | null;
+    prix_m2_growth_3y: number | null;
+    loyer_m2_appartement: number | null;
+    loyer_m2_maison: number | null;
+    rendement_brut_appartement: number | null;
+    rendement_brut_maison: number | null;
+  };
+  scores: {
+    score_yield: number | null;
+    score_growth: number | null;
+    score_demand: number | null;
+    score_global: number | null;
+  } | null;
+  dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
+  valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
+}

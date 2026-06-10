@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getScreener } from '@/lib/api';
 import { CommuneRow, ScreenerSort } from '@/lib/types';
 import { formatEUR } from '@/lib/format';
@@ -29,6 +30,7 @@ const pct = (v: number | null, sign = false) =>
 
 export default function ScreenerPage() {
   const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
   const [rows, setRows] = useState<CommuneRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -148,7 +150,9 @@ export default function ScreenerPage() {
                 <tr><td colSpan={8} className="px-3 py-10 text-center text-slate-400">{t.noResults}</td></tr>
               ) : (
                 rows.map((r) => (
-                  <tr key={r.code_commune} className="hover:bg-slate-50">
+                  <tr key={r.code_commune}
+                    onClick={() => router.push(`/commune/${r.code_commune}`)}
+                    className="cursor-pointer hover:bg-slate-50">
                     <td className="px-3 py-2"><ScoreBadge v={r.score_global} /></td>
                     <td className="px-3 py-2">
                       <div className="font-medium text-slate-800">{r.nom_commune}</div>
