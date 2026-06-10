@@ -38,6 +38,7 @@ export default function ScreenerPage() {
   const [dir, setDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [dept, setDept] = useState('');
+  const [q, setQ] = useState('');
   const [minYield, setMinYield] = useState('');
   const [minScore, setMinScore] = useState('');
   const pageSize = 25;
@@ -49,6 +50,7 @@ export default function ScreenerPage() {
       getScreener({
         sort, dir, page, pageSize,
         dept: dept || undefined,
+        q: q || undefined,
         minYield: minYield ? Number(minYield) : undefined,
         minScore: minScore ? Number(minScore) : undefined,
       })
@@ -61,7 +63,7 @@ export default function ScreenerPage() {
         .finally(() => !cancelled && setLoading(false));
     }, 250);
     return () => { cancelled = true; clearTimeout(h); };
-  }, [sort, dir, page, dept, minYield, minScore]);
+  }, [sort, dir, page, dept, q, minYield, minScore]);
 
   const toggleSort = (col: ScreenerSort) => {
     if (sort === col) setDir(dir === 'desc' ? 'asc' : 'desc');
@@ -113,6 +115,10 @@ export default function ScreenerPage() {
 
         {/* Filters */}
         <div className="mt-5 flex flex-wrap items-end gap-3">
+          <Field label={t.filterCity}>
+            <input value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }}
+              placeholder="Lyon, Bordeaux…" className="w-44 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
+          </Field>
           <Field label={t.filterDept}>
             <input value={dept} onChange={(e) => { setDept(e.target.value); setPage(1); }}
               placeholder="13" className="w-24 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
