@@ -1,5 +1,5 @@
-import type { Sale, BBox, Filters, YearTrend } from './types';
-import { mockSalesInView, mockComparables, mockTrend } from './mock';
+import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams } from './types';
+import { mockSalesInView, mockComparables, mockTrend, mockScreener } from './mock';
 
 const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
 export const USING_MOCK = API === '';
@@ -65,6 +65,33 @@ export async function getTrend(codeCommune?: string, type?: string | null): Prom
   if (!res.ok) throw new Error(`trend ${res.status}`);
   const data = await res.json();
   return data.trend ?? [];
+}
+
+export interface ScreenerResult {
+  results: CommuneRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** City screener — ranked communes with metrics + investment scores. */
+export async function getScreener(p: ScreenerParams): Promise<ScreenerResult> {
+  if (USING_MOCK) {
+    const results = mockScreener(p.sort, p.dir);
+    return { results, total: results.length, page: 1, pageSize: results.length };
+  }
+  const sp = new URLSearchParams();
+  if (p.dept) sp.set('dept', p.dept);
+  if (p.minYield != null) sp.set('minYield', String(p.minYield));
+  if (p.minScore != null) sp.set('minScore', String(p.minScore));
+  if (p.q) sp.set('q', p.q);
+  if (p.sort) sp.set('sort', p.sort);
+  if (p.dir) sp.set('dir', p.dir);
+  sp.set('page', String(p.page ?? 1));
+  sp.set('pageSize', String(p.pageSize ?? 25));
+  const res = await fetch(`${API}/api/screener?${sp.toString()}`);
+  if (!res.ok) throw new Error(`screener ${res.status}`);
+  return res.json();
 }
 
 // --- French government address autocomplete (BAN) — free, no key, works in the browser. ---

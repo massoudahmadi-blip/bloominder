@@ -1,4 +1,4 @@
-import type { Sale, PropertyType, BBox, Filters, YearTrend } from './types';
+import type { Sale, PropertyType, BBox, Filters, YearTrend, CommuneRow, ScreenerSort } from './types';
 
 // Deterministic pseudo-random so the demo looks the same every reload.
 function mulberry32(seed: number) {
@@ -109,6 +109,39 @@ export function mockComparables(lat: number, lon: number, type?: string | null):
   return ALL_SALES.filter((s) => (type ? s.type === type : true))
     .sort((a, b) => dist(a) - dist(b))
     .slice(1, 7);
+}
+
+export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'): CommuneRow[] {
+  const rows: CommuneRow[] = COMMUNES.map((c, i) => {
+    const med = c.base;
+    const rent = Math.round(med * 0.0042 * 100) / 100;
+    const yld = Math.round((rent * 12) / med * 1000) / 10;
+    return {
+      code_commune: c.code,
+      nom_commune: c.nom,
+      code_departement: c.code.slice(0, 2),
+      ventes_total: 140 - i * 12,
+      median_prix_m2: med,
+      median_prix_m2_appartement: med,
+      median_prix_m2_maison: Math.round(med * 0.95),
+      prix_m2_growth_3y: 6 + i * 2.5,
+      loyer_m2_appartement: rent,
+      rendement_brut_appartement: yld,
+      rendement_brut_maison: Math.round(yld * 0.9 * 10) / 10,
+      score_global: 82 - i * 6,
+      score_yield: 76 - i * 5,
+      score_growth: 71 - i * 4,
+      score_demand: 68 - i * 3,
+      pct_passoire: 11 + i * 2,
+    };
+  });
+  const key = (sort ?? 'score_global') as keyof CommuneRow;
+  rows.sort((a, b) => {
+    const av = (a[key] as number) ?? -Infinity;
+    const bv = (b[key] as number) ?? -Infinity;
+    return dir === 'asc' ? av - bv : bv - av;
+  });
+  return rows;
 }
 
 export function mockTrend(codeCommune?: string, type?: string | null): YearTrend[] {

@@ -21,6 +21,11 @@ export function Header({ onLocate }: { onLocate: (s: AddressSuggestion) => void 
         </div>
       </div>
 
+      <nav className="hidden items-center gap-1 text-sm md:flex">
+        <a href="/" className="rounded-lg px-3 py-1.5 font-medium text-brand-700 hover:bg-slate-100">{t.mapTab}</a>
+        <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.markets}</a>
+      </nav>
+
       <div className="max-w-xl flex-1">
         <SearchBar onLocate={onLocate} />
       </div>

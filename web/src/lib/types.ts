@@ -38,3 +38,40 @@ export interface YearTrend {
   ventes: number;
   median_eur_m2: number | null;
 }
+
+export interface CommuneRow {
+  code_commune: string;
+  nom_commune: string;
+  code_departement: string;
+  ventes_total: number;
+  median_prix_m2: number | null;
+  median_prix_m2_appartement: number | null;
+  median_prix_m2_maison: number | null;
+  prix_m2_growth_3y: number | null;
+  loyer_m2_appartement: number | null;
+  rendement_brut_appartement: number | null;
+  rendement_brut_maison: number | null;
+  score_global: number | null;
+  score_yield: number | null;
+  score_growth: number | null;
+  score_demand: number | null;
+  pct_passoire: number | null;
+}
+
+export type ScreenerSort =
+  | 'score_global'
+  | 'rendement_brut_appartement'
+  | 'prix_m2_growth_3y'
+  | 'median_prix_m2'
+  | 'ventes_total';
+
+export interface ScreenerParams {
+  dept?: string;
+  minYield?: number;
+  minScore?: number;
+  q?: string;
+  sort?: ScreenerSort;
+  dir?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}

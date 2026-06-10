@@ -7,6 +7,7 @@ import { mapRoutes } from './routes/map';
 import { searchRoutes } from './routes/search';
 import { propertyRoutes } from './routes/property';
 import { statsRoutes } from './routes/stats';
+import { screenerRoutes } from './routes/screener';
 
 const app = Fastify({ logger: true });
 
@@ -20,6 +21,7 @@ async function main() {
   await app.register(searchRoutes, { prefix: '/api' });
   await app.register(propertyRoutes, { prefix: '/api' });
   await app.register(statsRoutes, { prefix: '/api' });
+  await app.register(screenerRoutes, { prefix: '/api' });
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
