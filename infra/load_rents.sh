@@ -40,7 +40,7 @@ load_rent() {
   echo ">> Loading $name ..."
   curl -fSL "$url" -o "$DATA/rent_$col.csv"
   psql -c "TRUNCATE stg_rent;" >/dev/null
-  psql -c "\copy stg_rent FROM '/data/rent_$col.csv' WITH (FORMAT csv, DELIMITER ';', HEADER true)" >/dev/null
+  psql -c "\copy stg_rent FROM '/data/rent_$col.csv' WITH (FORMAT csv, DELIMITER ';', HEADER true, ENCODING 'LATIN1')" >/dev/null
   psql -c "INSERT INTO rents_commune(code_commune,nom_commune,code_departement,$col)
     SELECT insee, max(libgeo), max(dep), round(avg(replace(loypredm2,',','.')::numeric),2)
     FROM stg_rent WHERE insee <> '' AND loypredm2 <> ''
