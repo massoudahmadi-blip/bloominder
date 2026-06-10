@@ -27,6 +27,14 @@ body {
   @apply rounded-full bg-slate-300;
 }
 
+/* Print / PDF: hide controls, clean page */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .report-card { box-shadow: none !important; border-color: #e2e8f0 !important; break-inside: avoid; }
+  @page { margin: 14mm; }
+}
+
 /* MapLibre popup polish */
 .maplibregl-popup-content {
   @apply rounded-xl p-0 shadow-panel;

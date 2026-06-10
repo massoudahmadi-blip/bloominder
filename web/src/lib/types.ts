@@ -105,6 +105,7 @@ export interface CommuneProfile {
     score_global: number | null;
   } | null;
   dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
+  resale: { resales: number; median_gain_pct: number | null; median_annualized: number | null } | null;
   demo: { population: number | null; pop_growth: number | null; median_income: number | null } | null;
   tax: { taux_tfb: number | null; taux_th: number | null; thrs_major: string | null } | null;
   airbnb: {

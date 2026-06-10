@@ -84,12 +84,20 @@ export default function CommunePage() {
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">{m.nom_commune}</h1>
                 <p className="mt-0.5 text-sm text-slate-400">{m.code_departement} · INSEE {m.code_commune}</p>
               </div>
-              <a
-                href={`/calculateur?prix=${Math.round((m.median_prix_m2_appartement ?? m.median_prix_m2 ?? 0) * 50)}&loyer=${Math.round((m.loyer_m2_appartement ?? 0) * 50)}`}
-                className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
-              >
-                {t.simulate}
-              </a>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={`/rapport/${m.code_commune}`}
+                  className="rounded-full border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
+                >
+                  {t.generateReport}
+                </a>
+                <a
+                  href={`/calculateur?prix=${Math.round((m.median_prix_m2_appartement ?? m.median_prix_m2 ?? 0) * 50)}&loyer=${Math.round((m.loyer_m2_appartement ?? 0) * 50)}`}
+                  className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
+                >
+                  {t.simulate}
+                </a>
+              </div>
             </div>
 
             {/* Scores */}
