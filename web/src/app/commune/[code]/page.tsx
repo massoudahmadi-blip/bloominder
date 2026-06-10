@@ -114,6 +114,7 @@ export default function CommunePage() {
             {/* KPIs */}
             <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Kpi label={t.kpiPopulation} value={data.demo?.population != null ? data.demo.population.toLocaleString('fr-FR') : '—'} />
+              <Kpi label={t.kpiIncome} value={data.demo?.median_income != null ? formatEUR(data.demo.median_income, locale) : '—'} />
               <Kpi label={t.kpiPriceAppt} value={m.median_prix_m2_appartement ? formatEUR(m.median_prix_m2_appartement, locale) : '—'} />
               <Kpi label={t.kpiPriceMaison} value={m.median_prix_m2_maison ? formatEUR(m.median_prix_m2_maison, locale) : '—'} />
               <Kpi label={t.kpiRent} value={m.loyer_m2_appartement != null ? `${m.loyer_m2_appartement} €` : '—'} />

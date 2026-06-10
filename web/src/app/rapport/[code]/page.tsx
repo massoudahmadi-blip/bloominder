@@ -169,8 +169,13 @@ export default function ReportPage() {
 
           {/* Demographics & taxes */}
           <Card title={t.secDemoFisc}>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <Kpi label={t.kpiPopulation} value={data.demo?.population != null ? data.demo.population.toLocaleString('fr-FR') : '—'} />
+              <Kpi label={t.kpiIncome} value={data.demo?.median_income != null ? formatEUR(data.demo.median_income, locale) : '—'} />
+              <Kpi label={t.kpiAffordability}
+                value={(m.median_prix_m2_appartement && data.demo?.median_income)
+                  ? (Math.round((m.median_prix_m2_appartement * 70 / data.demo.median_income) * 10) / 10).toString()
+                  : '—'} />
               <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.colVentes} value={m.ventes_total.toLocaleString('fr-FR')} />
             </div>

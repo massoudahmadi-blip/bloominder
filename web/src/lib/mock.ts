@@ -191,7 +191,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     scores: { score_yield: 72, score_growth: 64, score_demand: 70, score_global: 69 },
     dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
     resale: { resales: 380, median_gain_pct: 16.5, median_annualized: 3.2 },
-    demo: { population: 52000, pop_growth: null, median_income: null },
+    demo: { population: 52000, pop_growth: null, median_income: 22500 },
     tax: { taux_tfb: 34.2, taux_th: 18.5, thrs_major: null },
     airbnb: { listings: 640, median_nightly: 110, pct_entire: 72.5, median_occupancy: 48, median_revenue_year: 14800 },
     risk: { seismic_zone: 'Zone 2 (faible)', risks: 'Inondation · Mouvement de terrain · Séisme · Transport de matières dangereuses', icpe_count: 72, seveso_count: 2 },
