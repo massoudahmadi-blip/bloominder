@@ -191,8 +191,26 @@ Per year it: downloads the ~300 MB national file, extracts the department's real
 geocodes the unique addresses, and loads them into `transactions`. The final summary prints
 `total`, `with_coords` (how many got coordinates), and the date range.
 
-> National rollout (all France) is the next stage — a department-by-department loop — added
-> once the pilot above is confirmed and we've measured BAN geocoding throughput.
+## 8c. National load — all of France
+
+Loads every department: recent geo-DVF (2021–2025) + historical geocoded (2014–2018).
+This is **long (several hours)** and **must run in tmux** so an SSH drop won't kill it.
+It is **resumable** — re-running skips already-geocoded department-years and reloads idempotently.
+
+```bash
+cd ~/bloominder/infra
+git pull
+chmod +x load_all_france.sh
+tmux new -s france           # persistent session
+./load_all_france.sh         # detach with Ctrl+B then D; reattach: tmux attach -t france
+```
+Phases: (1) recent geo-DVF per department, (2) split each historical year file once by
+department, (3) geocode + load each department-year. The final summary prints `total`,
+`with_coords`, and `departments` (~96 expected). Alsace/Moselle (67/68/57) and Mayotte (976)
+have no DVF data and are skipped automatically.
+
+> Tip: watch progress with `tmux attach -t france`. If BAN throttles a department it's logged
+> and retried on the next run (geocoding is cached per department-year).
 
 ---
 

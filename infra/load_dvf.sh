@@ -49,7 +49,12 @@ for YEAR in $(seq "$YEAR_FROM" "$YEAR_TO"); do
 done
 
 echo ">> Transforming raw -> transactions (clean, typed, geolocated)..."
-psql <<'SQL'
+psql <<SQL
+-- Idempotent: drop any existing rows for these departments+years before reinserting.
+DELETE FROM transactions t
+USING (SELECT DISTINCT code_departement FROM dvf_raw) d
+WHERE t.code_departement = d.code_departement
+  AND t.date_mutation BETWEEN '${YEAR_FROM}-01-01' AND '${YEAR_TO}-12-31';
 INSERT INTO transactions (
   id_mutation, date_mutation, nature_mutation, valeur_fonciere,
   adresse, code_postal, code_commune, nom_commune, code_departement,
