@@ -41,3 +41,39 @@ CREATE TABLE IF NOT EXISTS commune_scores (
 
 CREATE INDEX IF NOT EXISTS commune_metrics_dep_idx  ON commune_metrics (code_departement);
 CREATE INDEX IF NOT EXISTS commune_scores_global_idx ON commune_scores (score_global DESC);
+
+-- ---------------------------------------------------------------------------
+-- DPE energy diagnostics (ADEME "dpe03existant", since July 2021).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS dpe (
+  numero_dpe      text PRIMARY KEY,
+  date_dpe        date,
+  type_batiment   text,            -- maison / appartement / immeuble
+  etiquette_dpe   text,            -- A..G (energy)
+  etiquette_ges   text,            -- A..G (greenhouse gas)
+  surface         numeric,
+  code_commune    text,
+  code_postal     text,
+  geom            geometry(Point, 4326)
+);
+CREATE INDEX IF NOT EXISTS dpe_geom_gix    ON dpe USING GIST (geom);
+CREATE INDEX IF NOT EXISTS dpe_commune_idx ON dpe (code_commune);
+
+-- Each sale matched to its nearest DPE (vendrebien-style spatial cross-check).
+CREATE TABLE IF NOT EXISTS transaction_dpe (
+  transaction_id  bigint PRIMARY KEY REFERENCES transactions(id) ON DELETE CASCADE,
+  numero_dpe      text,
+  etiquette_dpe   text,
+  etiquette_ges   text,
+  distance_m      numeric
+);
+CREATE INDEX IF NOT EXISTS transaction_dpe_label_idx ON transaction_dpe (etiquette_dpe);
+
+-- Per-commune energy profile of the housing stock.
+CREATE TABLE IF NOT EXISTS commune_dpe (
+  code_commune  text PRIMARY KEY,
+  dpe_total     int,
+  pct_passoire  numeric,   -- % F or G (rental-ban risk)
+  pct_abc       numeric,   -- % A/B/C (efficient)
+  computed_at   timestamptz DEFAULT now()
+);

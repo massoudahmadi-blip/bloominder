@@ -233,6 +233,24 @@ prints the top communes by score. Re-run `compute_metrics.sh` after any data ref
 
 ---
 
+## 8e. Energy diagnostics (DPE) + DVF×DPE cross-check
+
+Adds ADEME DPE energy ratings and matches each sale to its nearest DPE (~50 m) — powering
+the "valeur verte", passoire-thermique (F/G rental-ban risk), and renovation/flip signals.
+
+```bash
+cd ~/bloominder/infra
+git pull
+tmux new -s dpe              # long for all-France (millions of records)
+./load_dpe.sh                # fetch + load all departments (or: ./load_dpe.sh 13 06)
+./match_dpe.sh               # cross-check sales ↔ DPE + commune energy profiles
+```
+`load_dpe.sh` pulls ADEME `dpe03existant` per department via API into `dpe`. `match_dpe.sh`
+fills `transaction_dpe` (each sale → nearest DPE) and `commune_dpe` (% passoire, % A/B/C), then
+prints **median €/m² by energy class** — the "valeur verte" in action. Re-run after refreshes.
+
+---
+
 ## 9. Go live with HTTPS (reverse proxy)
 
 When the data looks good and you want `bloominder.com` online, **Caddy** runs the whole stack
