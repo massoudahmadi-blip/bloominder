@@ -16,6 +16,7 @@ export interface Sale {
   surface_terrain?: number | null;
   resale_pct?: number | null; // realized gain vs the previous sale of the same property
   resale_prev_date?: string | null;
+  dpe?: string | null; // DPE energy class A–G of the nearest matched diagnostic
   longitude: number;
   latitude: number;
 }
@@ -59,6 +60,7 @@ export interface CommuneRow {
   score_demand: number | null;
   pct_passoire: number | null;
   resale_gain: number | null;
+  taxe_fonciere: number | null;
 }
 
 export type ScreenerSort =
@@ -103,5 +105,6 @@ export interface CommuneProfile {
   } | null;
   dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
   demo: { population: number | null; pop_growth: number | null; median_income: number | null } | null;
+  tax: { taux_tfb: number | null; taux_th: number | null; thrs_major: string | null } | null;
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }

@@ -16,6 +16,7 @@ import { Sale, BBox } from '@/lib/types';
 import { priceM2Color, formatEUR, formatPriceM2, formatM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
+import { EnergyBadge } from './EnergyBadge';
 
 // Clean light basemap from CARTO (free, attribution required). No glyphs needed because
 // we have no symbol layers — cluster counts are rendered as HTML markers.
@@ -235,10 +236,11 @@ export function PropertyMap({
                 {selected.adresse ? `${selected.adresse}, ` : ''}
                 {selected.nom_commune}
               </div>
-              <div className="mt-2 flex gap-3 text-[11px] text-slate-500">
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
                 {selected.type && <span>{(t as any)[selected.type] ?? selected.type}</span>}
                 {selected.surface_bati != null && <span>{formatM2(selected.surface_bati)}</span>}
                 {selected.nb_pieces != null && <span>{selected.nb_pieces} p.</span>}
+                {selected.dpe && <EnergyBadge classe={selected.dpe} size={16} />}
               </div>
               {selected.resale_pct != null && (
                 <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">

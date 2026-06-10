@@ -69,6 +69,16 @@ CREATE TABLE IF NOT EXISTS transaction_dpe (
 );
 CREATE INDEX IF NOT EXISTS transaction_dpe_label_idx ON transaction_dpe (etiquette_dpe);
 
+-- Local tax rates per commune (DGFiP "fiscalité locale des particuliers", REI).
+CREATE TABLE IF NOT EXISTS commune_tax (
+  code_commune  text PRIMARY KEY,
+  exercice      text,
+  taux_tfb      numeric,   -- taxe foncière bâti, total rate % (commune + EPCI + ...)
+  taux_th       numeric,   -- taxe d'habitation rate % (now mainly secondary residences)
+  thrs_major    text,      -- THRS majoration indicator (zones tendues / secondary residences)
+  updated_at    timestamptz DEFAULT now()
+);
+
 -- Repeat sales: a transaction that is a resale of the same parcel (realized gain).
 CREATE TABLE IF NOT EXISTS transaction_resale (
   transaction_id  bigint PRIMARY KEY REFERENCES transactions(id) ON DELETE CASCADE,

@@ -31,6 +31,7 @@ export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale
     prix_m2: feat.properties.prix_m2 ?? null,
     resale_pct: feat.properties.resale_pct ?? null,
     resale_prev_date: feat.properties.resale_prev_date ?? null,
+    dpe: feat.properties.dpe ?? null,
     longitude: feat.geometry.coordinates[0],
     latitude: feat.geometry.coordinates[1],
   }));
@@ -131,6 +132,7 @@ export async function getCommuneTransactions(
       code_postal: r.code_postal,
       surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
       nb_pieces: r.nb_pieces ?? null,
+      dpe: r.dpe ?? null,
       longitude: r.longitude ?? 0,
       latitude: r.latitude ?? 0,
     })),

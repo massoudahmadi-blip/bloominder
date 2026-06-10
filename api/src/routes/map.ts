@@ -35,12 +35,14 @@ export async function mapRoutes(app: FastifyInstance) {
       id: number; id_mutation: string; date_mutation: string;
       valeur_fonciere: string; type_local: string | null; prix_m2: string | null;
       longitude: number; latitude: number;
-      resale_pct: string | null; resale_prev_date: string | null;
+      resale_pct: string | null; resale_prev_date: string | null; dpe: string | null;
     }>(
       `SELECT t.id, t.id_mutation, t.date_mutation, t.valeur_fonciere, t.type_local, t.prix_m2,
-              t.longitude, t.latitude, r.change_pct AS resale_pct, r.prev_date AS resale_prev_date
+              t.longitude, t.latitude, r.change_pct AS resale_pct, r.prev_date AS resale_prev_date,
+              td.etiquette_dpe AS dpe
        FROM transactions t
        LEFT JOIN transaction_resale r ON r.transaction_id = t.id
+       LEFT JOIN transaction_dpe td ON td.transaction_id = t.id
        WHERE ${where.join(' AND ')}
        ORDER BY t.date_mutation DESC
        LIMIT $${params.length}`,
@@ -61,6 +63,7 @@ export async function mapRoutes(app: FastifyInstance) {
           prix_m2: r.prix_m2 ? Number(r.prix_m2) : null,
           resale_pct: r.resale_pct != null ? Number(r.resale_pct) : null,
           resale_prev_date: r.resale_prev_date,
+          dpe: r.dpe,
         },
       })),
     };

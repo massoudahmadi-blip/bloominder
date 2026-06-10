@@ -61,6 +61,7 @@ function makeSales(): Sale[] {
       }
 
       const resalePct = rnd() > 0.7 ? Math.round(rnd() * 35 + 5) : null;
+      const dpeClass = rnd() > 0.25 ? ['B', 'C', 'D', 'D', 'E', 'F', 'G'][Math.floor(rnd() * 7)] : null;
       sales.push({
         id: id++,
         id_mutation: `2024-${c.code}-${i}`,
@@ -77,6 +78,7 @@ function makeSales(): Sale[] {
         surface_terrain,
         resale_pct: resalePct,
         resale_prev_date: resalePct != null ? `${year - 4}-06-15` : undefined,
+        dpe: dpeClass,
         longitude: Number(lon.toFixed(6)),
         latitude: Number(lat.toFixed(6)),
       });
@@ -137,6 +139,7 @@ export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'):
       score_demand: 68 - i * 3,
       pct_passoire: 11 + i * 2,
       resale_gain: 22 - i * 3,
+      taxe_fonciere: Math.round((28 + i * 3) * 10) / 10,
     };
   });
   const key = (sort ?? 'score_global') as keyof CommuneRow;
@@ -179,6 +182,7 @@ export function mockCommune(code: string): CommuneProfile | null {
     scores: { score_yield: 72, score_growth: 64, score_demand: 70, score_global: 69 },
     dpe: { dpe_total: 4200, pct_passoire: 17.5, pct_abc: 28.3 },
     demo: { population: 52000, pop_growth: null, median_income: null },
+    tax: { taux_tfb: 34.2, taux_th: 18.5, thrs_major: null },
     valeur_verte: [
       { classe: 'B', ventes: 40, median_eur_m2: Math.round(med * 1.12) },
       { classe: 'C', ventes: 110, median_eur_m2: Math.round(med * 1.05) },

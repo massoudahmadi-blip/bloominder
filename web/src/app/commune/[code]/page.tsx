@@ -7,6 +7,7 @@ import { CommuneProfile, Sale } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
+import { EnergyBadge } from '@/components/EnergyBadge';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -110,6 +111,7 @@ export default function CommunePage() {
               <Kpi label={t.kpiRent} value={m.loyer_m2_appartement != null ? `${m.loyer_m2_appartement} €` : '—'} />
               <Kpi label={t.kpiYield} value={m.rendement_brut_appartement != null ? `${m.rendement_brut_appartement}%` : '—'} accent />
               <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_3y != null ? `${m.prix_m2_growth_3y > 0 ? '+' : ''}${m.prix_m2_growth_3y}%` : '—'} />
+              <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </section>
 
@@ -152,6 +154,7 @@ export default function CommunePage() {
                     <tr>
                       <th className="px-2 py-2 text-left font-medium">{t.colDate}</th>
                       <th className="px-2 py-2 text-left font-medium">{t.colType}</th>
+                      <th className="px-2 py-2 text-center font-medium">{t.colDpe}</th>
                       <th className="px-2 py-2 text-left font-medium">{t.colCommune}</th>
                       <th className="px-2 py-2 text-right font-medium">{t.surface}</th>
                       <th className="px-2 py-2 text-right font-medium">{t.rooms}</th>
@@ -161,12 +164,13 @@ export default function CommunePage() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {tx.length === 0 ? (
-                      <tr><td colSpan={7} className="px-2 py-6 text-center text-slate-400">—</td></tr>
+                      <tr><td colSpan={8} className="px-2 py-6 text-center text-slate-400">—</td></tr>
                     ) : (
                       tx.map((s) => (
                         <tr key={s.id} className="hover:bg-slate-50">
                           <td className="px-2 py-2 whitespace-nowrap text-slate-500">{formatDate(s.date, locale)}</td>
                           <td className="px-2 py-2">{s.type ? ((t as any)[s.type] ?? s.type) : '—'}</td>
+                          <td className="px-2 py-2 text-center"><EnergyBadge classe={s.dpe} /></td>
                           <td className="px-2 py-2 max-w-[200px] truncate text-slate-600">{s.adresse ?? '—'}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{s.surface_bati != null ? formatM2(s.surface_bati) : '—'}</td>
                           <td className="px-2 py-2 text-right tabular-nums">{s.nb_pieces ?? '—'}</td>

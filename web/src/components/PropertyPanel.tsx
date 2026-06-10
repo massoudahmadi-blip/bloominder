@@ -6,6 +6,7 @@ import { getComparables, getTrend } from '@/lib/api';
 import { formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { TrendChart } from './TrendChart';
+import { EnergyBadge } from './EnergyBadge';
 
 function median(nums: number[]): number | null {
   const a = nums.filter((n) => n != null).sort((x, y) => x - y);
@@ -66,10 +67,14 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
 
         <div className="scroll-thin flex-1 space-y-6 overflow-y-auto px-5 py-5">
           {/* Key facts */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <Fact label={t.pricePerM2} value={formatPriceM2(sale.prix_m2, locale)} />
             <Fact label={t.surface} value={formatM2(sale.surface_bati)} />
             <Fact label={t.rooms} value={sale.nb_pieces != null ? String(sale.nb_pieces) : '—'} />
+            <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center">
+              <div className="flex h-[22px] items-center justify-center"><EnergyBadge classe={sale.dpe} /></div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">DPE</div>
+            </div>
           </div>
 
           {/* Sale */}

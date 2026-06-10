@@ -52,12 +52,13 @@ export async function searchRoutes(app: FastifyInstance) {
 
     params.push(q.pageSize, offset);
     const rows = await query(
-      `SELECT id, id_mutation, date_mutation, valeur_fonciere, adresse,
-              code_postal, nom_commune, type_local, surface_bati, nb_pieces,
-              prix_m2, longitude, latitude
-       FROM transactions
+      `SELECT t.id, t.id_mutation, t.date_mutation, t.valeur_fonciere, t.adresse,
+              t.code_postal, t.nom_commune, t.type_local, t.surface_bati, t.nb_pieces,
+              t.prix_m2, t.longitude, t.latitude, td.etiquette_dpe AS dpe
+       FROM transactions t
+       LEFT JOIN transaction_dpe td ON td.transaction_id = t.id
        ${whereSql}
-       ORDER BY date_mutation DESC
+       ORDER BY t.date_mutation DESC
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );

@@ -139,6 +139,7 @@ export default function ScreenerPage() {
                 <th className="px-3 py-2 text-right font-medium">{t.colRent}</th>
                 <Th col="rendement_brut_appartement" label={t.colYield} right />
                 <th className="px-3 py-2 text-right font-medium">{t.colResale}</th>
+                <th className="px-3 py-2 text-right font-medium">{t.colTax}</th>
                 <th className="px-3 py-2 text-right font-medium">{t.colPassoire}</th>
                 <Th col="ventes_total" label={t.colVentes} right />
               </tr>
@@ -165,6 +166,7 @@ export default function ScreenerPage() {
                     <td className="px-3 py-2 text-right tabular-nums">{r.loyer_m2_appartement != null ? `${r.loyer_m2_appartement} €` : '—'}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800">{pct(r.rendement_brut_appartement)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{pct(r.resale_gain, true)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">{pct(r.taxe_fonciere)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{pct(r.pct_passoire)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">{r.ventes_total}</td>
                   </tr>

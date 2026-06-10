@@ -115,6 +115,9 @@ const dict = {
     kpiPopulation: 'Population',
     colResale: 'Plus-value revente',
     resold: 'Revendu',
+    colTax: 'Taxe fonc.',
+    kpiTax: 'Taxe foncière',
+    colDpe: 'DPE',
   },
   en: {
     tagline: 'French property sold prices',
@@ -226,6 +229,9 @@ const dict = {
     kpiPopulation: 'Population',
     colResale: 'Resale gain',
     resold: 'Resold',
+    colTax: 'Property tax',
+    kpiTax: 'Property tax rate',
+    colDpe: 'EPC',
   },
 } as const;
 
