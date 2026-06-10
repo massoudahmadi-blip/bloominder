@@ -1,0 +1,25 @@
+# Bloominder reverse proxy — automatic HTTPS via Let's Encrypt.
+# Caddy obtains and renews TLS certificates on its own, as long as:
+#   - ports 80 and 443 are open (ufw allows them, see SETUP.md), and
+#   - DNS A records for the domain, www, and api all point to the VPS IP.
+# Env vars (DOMAIN, API_DOMAIN, ACME_EMAIL) come from the .env file via docker-compose.
+
+{
+	email {$ACME_EMAIL}
+}
+
+# Main site → Next.js. Redirect www to the bare domain.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+# API → Fastify service.
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3001
+}

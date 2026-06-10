@@ -1,3 +1,9 @@
+# Bloominder stack.
+#   Pilot / data-load phase:   docker compose up -d db        (only the database)
+#   Full production:           docker compose --profile prod up -d --build
+# Services tagged with profile "prod" (api, web, caddy) only start with that flag,
+# so the early data-loading steps stay simple.
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -7,24 +13,72 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-bloominder}
       POSTGRES_USER: ${POSTGRES_USER:-bloominder}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-    # Bind to localhost only — never expose Postgres to the public internet.
+    # Bound to localhost only — reachable for psql/tunnels, never exposed publicly.
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./data:/data          # CSVs you download land here, visible inside the container
+      - ./data:/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-    shm_size: "1gb"           # PostGIS likes shared memory for big sorts/joins
+    shm_size: "1gb"
     command:
       - "postgres"
       - "-c"
-      - "shared_buffers=2GB"          # ~25% of the L+ 8 GB RAM
+      - "shared_buffers=2GB"
       - "-c"
       - "effective_cache_size=5GB"
       - "-c"
-      - "maintenance_work_mem=512MB"  # speeds up index builds during load
+      - "maintenance_work_mem=512MB"
       - "-c"
       - "work_mem=64MB"
+    networks: [internal]
+
+  api:
+    profiles: ["prod"]
+    build: ../api
+    container_name: bloominder_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-bloominder}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bloominder}
+      PORT: "3001"
+      CORS_ORIGIN: https://${DOMAIN},https://www.${DOMAIN}
+    depends_on: [db]
+    networks: [internal]
+
+  web:
+    profiles: ["prod"]
+    build:
+      context: ../web
+      args:
+        # NEXT_PUBLIC_* is baked in at build time → point the browser at the API subdomain.
+        NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
+    container_name: bloominder_web
+    restart: unless-stopped
+    networks: [internal]
+
+  caddy:
+    profiles: ["prod"]
+    image: caddy:2-alpine
+    container_name: bloominder_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      API_DOMAIN: api.${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+    networks: [internal]
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

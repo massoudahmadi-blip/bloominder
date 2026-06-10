@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap will be added once SEO landing pages exist:
+# Sitemap: https://bloominder.com/sitemap.xml
