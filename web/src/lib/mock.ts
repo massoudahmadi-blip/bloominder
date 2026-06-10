@@ -144,6 +144,13 @@ export function mockScreener(sort?: ScreenerSort, dir: 'asc' | 'desc' = 'desc'):
   return rows;
 }
 
+export function mockCommuneTransactions(code: string, page = 1) {
+  const all = ALL_SALES.filter((s) => s.code_commune === code);
+  const pageSize = 20;
+  const start = (page - 1) * pageSize;
+  return { results: all.slice(start, start + pageSize), total: all.length, page, pageSize };
+}
+
 export function mockCommune(code: string): CommuneProfile | null {
   const c = COMMUNES.find((x) => x.code === code) ?? COMMUNES[0];
   const med = c.base;

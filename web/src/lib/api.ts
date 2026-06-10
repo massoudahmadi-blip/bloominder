@@ -1,5 +1,5 @@
 import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile } from './types';
-import { mockSalesInView, mockComparables, mockTrend, mockScreener, mockCommune } from './mock';
+import { mockSalesInView, mockComparables, mockTrend, mockScreener, mockCommune, mockCommuneTransactions } from './mock';
 
 const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
 export const USING_MOCK = API === '';
@@ -101,6 +101,38 @@ export async function getCommune(code: string): Promise<CommuneProfile | null> {
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`commune ${res.status}`);
   return res.json();
+}
+
+/** Paginated list of a commune's individual transactions (drill-down). */
+export async function getCommuneTransactions(
+  code: string,
+  page = 1,
+): Promise<{ results: Sale[]; total: number; page: number; pageSize: number }> {
+  if (USING_MOCK) return mockCommuneTransactions(code, page);
+  const sp = new URLSearchParams({ codeCommune: code, page: String(page), pageSize: '20' });
+  const res = await fetch(`${API}/api/search?${sp.toString()}`);
+  if (!res.ok) throw new Error(`search ${res.status}`);
+  const d = await res.json();
+  return {
+    total: d.total,
+    page: d.page,
+    pageSize: d.pageSize,
+    results: (d.results ?? []).map((r: any): Sale => ({
+      id: r.id,
+      id_mutation: r.id_mutation,
+      date: r.date_mutation,
+      prix: Number(r.valeur_fonciere),
+      type: r.type_local ?? null,
+      prix_m2: r.prix_m2 != null ? Number(r.prix_m2) : null,
+      adresse: r.adresse,
+      nom_commune: r.nom_commune,
+      code_postal: r.code_postal,
+      surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
+      nb_pieces: r.nb_pieces ?? null,
+      longitude: r.longitude ?? 0,
+      latitude: r.latitude ?? 0,
+    })),
+  };
 }
 
 // --- French government address autocomplete (BAN) — free, no key, works in the browser. ---

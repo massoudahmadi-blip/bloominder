@@ -42,6 +42,16 @@ export default function Home() {
     setMobileTab('map');
   };
 
+  const locateMe = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    setMobileTab('map');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setFocus({ lon: pos.coords.longitude, lat: pos.coords.latitude, key: Date.now() }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
   return (
     <div className="flex h-[100dvh] flex-col">
       <Header onLocate={(s) => setFocus({ lon: s.lon, lat: s.lat, key: Date.now() })} />
@@ -76,6 +86,17 @@ export default function Home() {
             onSelect={setSelected}
             onViewChange={setBbox}
           />
+          <button
+            onClick={locateMe}
+            title={t.nearMe}
+            className="absolute left-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-panel transition hover:bg-slate-50"
+          >
+            <svg className="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
+            </svg>
+            {t.nearMe}
+          </button>
           <PropertyPanel sale={selected} onClose={() => setSelected(null)} />
         </section>
 

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getCommune } from '@/lib/api';
-import { CommuneProfile } from '@/lib/types';
-import { formatEUR } from '@/lib/format';
+import { getCommune, getCommuneTransactions } from '@/lib/api';
+import { CommuneProfile, Sale } from '@/lib/types';
+import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
 
@@ -20,6 +20,9 @@ export default function CommunePage() {
   const code = String(params.code);
   const [data, setData] = useState<CommuneProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tx, setTx] = useState<Sale[]>([]);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txPage, setTxPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +33,14 @@ export default function CommunePage() {
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [code]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCommuneTransactions(code, txPage)
+      .then((r) => { if (!cancelled) { setTx(r.results); setTxTotal(r.total); } })
+      .catch(() => !cancelled && setTx([]));
+    return () => { cancelled = true; };
+  }, [code, txPage]);
 
   const m = data?.metrics;
   const s = data?.scores;
@@ -126,6 +137,54 @@ export default function CommunePage() {
                     ))}
                   </div>
                 </>
+              )}
+            </section>
+
+            {/* Transactions drill-down */}
+            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {t.transactions} <span className="text-slate-300">({txTotal.toLocaleString('fr-FR')})</span>
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th className="px-2 py-2 text-left font-medium">{t.colDate}</th>
+                      <th className="px-2 py-2 text-left font-medium">{t.colType}</th>
+                      <th className="px-2 py-2 text-left font-medium">{t.colCommune}</th>
+                      <th className="px-2 py-2 text-right font-medium">{t.surface}</th>
+                      <th className="px-2 py-2 text-right font-medium">{t.rooms}</th>
+                      <th className="px-2 py-2 text-right font-medium">{t.colPriceM2}</th>
+                      <th className="px-2 py-2 text-right font-medium">{t.colPrice}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {tx.length === 0 ? (
+                      <tr><td colSpan={7} className="px-2 py-6 text-center text-slate-400">—</td></tr>
+                    ) : (
+                      tx.map((s) => (
+                        <tr key={s.id} className="hover:bg-slate-50">
+                          <td className="px-2 py-2 whitespace-nowrap text-slate-500">{formatDate(s.date, locale)}</td>
+                          <td className="px-2 py-2">{s.type ? ((t as any)[s.type] ?? s.type) : '—'}</td>
+                          <td className="px-2 py-2 max-w-[200px] truncate text-slate-600">{s.adresse ?? '—'}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">{s.surface_bati != null ? formatM2(s.surface_bati) : '—'}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">{s.nb_pieces ?? '—'}</td>
+                          <td className="px-2 py-2 text-right tabular-nums">{s.prix_m2 != null ? formatPriceM2(s.prix_m2, locale) : '—'}</td>
+                          <td className="px-2 py-2 text-right font-medium tabular-nums text-slate-800">{formatEUR(s.prix, locale)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {txTotal > 20 && (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <button disabled={txPage <= 1} onClick={() => setTxPage((p) => p - 1)}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">{t.prev}</button>
+                  <span className="text-slate-400">{txPage} / {Math.max(1, Math.ceil(txTotal / 20))}</span>
+                  <button disabled={txPage >= Math.ceil(txTotal / 20)} onClick={() => setTxPage((p) => p + 1)}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">{t.next}</button>
+                </div>
               )}
             </section>
 

@@ -107,6 +107,11 @@ const dict = {
     rNet: 'Rendement net',
     rCoC: 'Rentabilité fonds propres',
     simulate: 'Simuler un investissement',
+    transactions: 'Transactions',
+    nearMe: 'Autour de moi',
+    colDate: 'Date',
+    colType: 'Type',
+    colPrice: 'Prix',
   },
   en: {
     tagline: 'French property sold prices',
@@ -210,6 +215,11 @@ const dict = {
     rNet: 'Net yield',
     rCoC: 'Cash-on-cash return',
     simulate: 'Model an investment',
+    transactions: 'Transactions',
+    nearMe: 'Near me',
+    colDate: 'Date',
+    colType: 'Type',
+    colPrice: 'Price',
   },
 } as const;
 
