@@ -176,6 +176,12 @@ Goal: an "astonishing" report. Marked (have)=from current data, (new)=needs an i
 
 Recommended sequencing: **Report v2 from existing data first** (comps, liquidity, volatility, peer comparison, rental-ban timeline + reno upside, financing/DSCR summary, auto-narrative, methodology) → then new open-data layers (Géorisques risks, livability, richer INSEE/income, supply, rent control, fiscal sim, cadastre).
 
+## 11c. Filters & search backlog (user request)
+
+- **Screener:** city-name ✅ (done) · department code ✅ · **postal code** (add code_postal to commune_metrics) · **department name** (name→code lookup) · ⚠️ **transaction date-range** not directly applicable to precomputed commune aggregates — would need windowed metrics (e.g. 12m/3y variants) or applies only at map/drill-down level.
+- **Map search:** **date range** (API /api/map already supports from/to — add UI) · **surface habitable** min/max · **land size** (surface_terrain) min/max · **DPE class** (join transaction_dpe) — all need /api/map params + filter UI.
+- **Data quality:** many DVF rows lack surface/rooms (land, dependencies, partial records) — surface/DPE filters naturally exclude them; flag in UI. **Multi-lot mutations** (rows that are one sale) → grouping fix via cadastre/id_mutation dedup (already queued §11/cadastre).
+
 ## 11. Open items to confirm
 - Pricing tiers/amounts, trial length, annual discount (defaults in §6).
 - Competitor tools the owner wants benchmarked (send links).
