@@ -88,6 +88,8 @@ export function PropertyMap({
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
   const [hovered, setHovered] = useState<Sale | null>(null);
+  const overCard = useRef(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const byId = useMemo(() => {
     const m = new Map<string, Sale>();
@@ -180,17 +182,30 @@ export function PropertyMap({
   };
 
   // Fluid hover: reveal the detail card on mouse-over (no click needed).
+  // While the pointer is over the card itself we freeze it, so moving to the
+  // "Analyser" button doesn't make the popup jump to a different dot.
   const handleMouseMove = (e: MapLayerMouseEvent) => {
+    if (overCard.current) return;
     const feat = e.features?.[0];
     if (feat && !(feat.properties as any).point_count) {
       const sale = byId.get((feat.properties as any).sid as string);
       if (sale) {
+        if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
         setCursor('pointer');
         if (sale.id !== hovered?.id) setHovered(sale);
         return;
       }
     }
     setCursor('grab');
+  };
+
+  const enterCard = () => {
+    overCard.current = true;
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+  };
+  const leaveCard = () => {
+    overCard.current = false;
+    closeTimer.current = setTimeout(() => setHovered(null), 180);
   };
 
   return (
@@ -207,7 +222,12 @@ export function PropertyMap({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => {
           setCursor('grab');
-          setHovered(null);
+          if (!overCard.current) {
+            if (closeTimer.current) clearTimeout(closeTimer.current);
+            closeTimer.current = setTimeout(() => {
+              if (!overCard.current) setHovered(null);
+            }, 180);
+          }
         }}
       >
         <NavigationControl position="top-right" showCompass={false} />
@@ -264,7 +284,7 @@ export function PropertyMap({
             maxWidth="300px"
             className="bloom-popup"
           >
-            <div className="w-72 p-3.5">
+            <div className="w-72 p-3.5" onMouseEnter={enterCard} onMouseLeave={leaveCard}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold uppercase tracking-tight text-slate-900">

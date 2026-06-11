@@ -161,6 +161,37 @@ export async function getStats(): Promise<StatsData> {
         { dept: '75', ventes: 410000, volume: 1.8e11, median_m2: 10500 },
         { dept: '33', ventes: 380000, volume: 5.2e10, median_m2: 3400 },
       ],
+      byYear: [
+        { annee: 2020, ventes: 2400000, volume: 3.2e11, median_m2: 2600 },
+        { annee: 2021, ventes: 2750000, volume: 3.9e11, median_m2: 2800 },
+        { annee: 2022, ventes: 2680000, volume: 4.0e11, median_m2: 2950 },
+        { annee: 2023, ventes: 2200000, volume: 3.4e11, median_m2: 2900 },
+        { annee: 2024, ventes: 2050000, volume: 3.1e11, median_m2: 2850 },
+        { annee: 2025, ventes: 2100000, volume: 3.2e11, median_m2: 2880 },
+      ],
+      byMonth: [
+        { mois: 1, ventes: 180000 }, { mois: 2, ventes: 170000 }, { mois: 3, ventes: 210000 },
+        { mois: 4, ventes: 220000 }, { mois: 5, ventes: 235000 }, { mois: 6, ventes: 260000 },
+        { mois: 7, ventes: 250000 }, { mois: 8, ventes: 200000 }, { mois: 9, ventes: 245000 },
+        { mois: 10, ventes: 240000 }, { mois: 11, ventes: 215000 }, { mois: 12, ventes: 230000 },
+      ],
+      priceBands: [
+        { ord: 1, label: '< 100 k€', ventes: 6200000 },
+        { ord: 2, label: '100–200 k€', ventes: 9100000 },
+        { ord: 3, label: '200–300 k€', ventes: 6400000 },
+        { ord: 4, label: '300–500 k€', ventes: 5200000 },
+        { ord: 5, label: '500 k–1 M€', ventes: 2600000 },
+        { ord: 6, label: '> 1 M€', ventes: 900000 },
+      ],
+      affordability: {
+        best: [{ code_commune: '42218', nom_commune: 'Saint-Étienne', code_departement: '42', years: 3.1 }],
+        worst: [{ code_commune: '75056', nom_commune: 'Paris', code_departement: '75', years: 22.4 }],
+      },
+      liquidity: {
+        fastest: [{ code_commune: '69123', nom_commune: 'Lyon', code_departement: '69', days: 96 }],
+        slowest: [{ code_commune: '2A004', nom_commune: 'Ajaccio', code_departement: '2A', days: 280 }],
+        national_median: 165,
+      },
       topSales: [
         { code_commune: '13055', nom_commune: 'Marseille', code_departement: '13', ventes_total: 120000 },
         { code_commune: '06088', nom_commune: 'Nice', code_departement: '06', ventes_total: 88000 },

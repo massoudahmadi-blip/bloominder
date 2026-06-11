@@ -25,6 +25,11 @@ export async function statsRoutes(app: FastifyInstance) {
       totals: map.totals ?? null,
       byType: map.by_type ?? [],
       byDept: Array.isArray(map.by_dept) ? map.by_dept.slice(0, 15) : [],
+      byYear: map.by_year ?? [],
+      byMonth: map.by_month ?? [],
+      priceBands: map.price_bands ?? [],
+      affordability: map.affordability ?? null,
+      liquidity: map.liquidity ?? null,
       topSales, topVolume, topTurnover,
     };
   });

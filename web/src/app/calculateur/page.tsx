@@ -3,12 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatEUR } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
-
-function remainingBalance(loan: number, mr: number, nTotal: number, nPaid: number): number {
-  if (nPaid >= nTotal) return 0;
-  if (mr === 0) return loan * (1 - nPaid / nTotal);
-  return loan * ((Math.pow(1 + mr, nTotal) - Math.pow(1 + mr, nPaid)) / (Math.pow(1 + mr, nTotal) - 1));
-}
+import { SubNav } from '@/components/SubNav';
+import { exportCalculatorXlsx } from '@/lib/excel';
 
 function irr(cfs: number[]): number | null {
   const npv = (rate: number) => cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + rate, i), 0);
@@ -22,8 +18,81 @@ function irr(cfs: number[]): number | null {
   return (lo + hi) / 2;
 }
 
+type SimInput = {
+  price: number; notairePct: number; works: number; furnishing: number; rent: number;
+  taxe: number; copro: number; mgmtPct: number; insurance: number; vacancyPct: number;
+  down: number; rate: number; term: number; holdYears: number; rentGrowth: number;
+  appreciation: number; sellCosts: number; tmi: number; regime: 'nu' | 'lmnp';
+};
+
+export interface ScheduleRow {
+  year: number; rent: number; interest: number; principal: number; balance: number; tax: number; cashflow: number;
+}
+
+// Full investment simulation: yields, cashflow, banker ratios, amortization + IRR.
+function simulate(p: SimInput) {
+  const notaire = p.price * (p.notairePct / 100);
+  const total = p.price + notaire + p.works + p.furnishing;
+  const loan = Math.max(0, total - p.down);
+  const mr = p.rate / 100 / 12;
+  const n = p.term * 12;
+  const payment = loan <= 0 ? 0 : mr === 0 ? loan / n : (loan * mr) / (1 - Math.pow(1 + mr, -n));
+  const monthlyCharges = p.taxe / 12 + p.copro + p.rent * (p.mgmtPct / 100) + p.insurance + p.rent * (p.vacancyPct / 100);
+  const netOpsM = p.rent - monthlyCharges;
+  const cashflowM = netOpsM - payment;
+  const grossYield = total > 0 ? (p.rent * 12) / total * 100 : 0;
+  const netYield = total > 0 ? (netOpsM * 12) / total * 100 : 0;
+  const coc = p.down > 0 ? (cashflowM * 12) / p.down * 100 : 0;
+  // Banker ratios.
+  const dscr = payment > 0 ? (netOpsM * 12) / (payment * 12) : null;
+  const fixedOutflowM = p.taxe / 12 + p.copro + p.insurance + p.rent * (p.mgmtPct / 100) + payment;
+  const breakEvenOcc = p.rent > 0 ? Math.min(150, (fixedOutflowM / p.rent) * 100) : null;
+
+  const abatement = p.regime === 'lmnp' ? 0.5 : 0.3;
+  const taxRate = p.tmi / 100 + 0.172;
+  const annualPayment = payment * 12;
+  const cfs: number[] = [-p.down];
+  const schedule: ScheduleRow[] = [];
+  let rentM = p.rent;
+  let bal = loan;
+  for (let y = 1; y <= p.holdYears; y++) {
+    let interestY = 0, principalY = 0;
+    for (let m = 0; m < 12; m++) {
+      const interest = bal * mr;
+      const princ = Math.min(bal, payment - interest);
+      interestY += interest; principalY += princ; bal = Math.max(0, bal - princ);
+    }
+    const annualRent = rentM * 12;
+    const noi = annualRent - monthlyCharges * 12;
+    const tax = Math.max(0, annualRent * (1 - abatement)) * taxRate;
+    let cf = noi - annualPayment - tax;
+    if (y === p.holdYears) {
+      const saleNet = p.price * Math.pow(1 + p.appreciation / 100, p.holdYears) * (1 - p.sellCosts / 100);
+      cf += saleNet - bal;
+    }
+    cfs.push(cf);
+    schedule.push({
+      year: y, rent: Math.round(annualRent), interest: Math.round(interestY),
+      principal: Math.round(principalY), balance: Math.round(bal), tax: Math.round(tax), cashflow: Math.round(cf),
+    });
+    rentM *= 1 + p.rentGrowth / 100;
+  }
+  const irrDec = irr(cfs);
+  const exitValue = p.price * Math.pow(1 + p.appreciation / 100, p.holdYears);
+  const totalProfit = cfs.reduce((s, c) => s + c, 0);
+  const y1Tax = Math.max(0, p.rent * 12 * (1 - abatement)) * taxRate;
+  const netCfM = (p.rent * 12 - monthlyCharges * 12 - annualPayment - y1Tax) / 12;
+  return {
+    notaire, total, loan, payment, monthlyCharges, cashflowM, grossYield, netYield, coc,
+    dscr, breakEvenOcc, irrPct: irrDec != null ? irrDec * 100 : null, exitValue, totalProfit, netCfM, schedule,
+  };
+}
+
+const SENS_RATES = [2.5, 3, 3.5, 4, 4.5];
+const SENS_APPRECS = [0, 1, 2, 3];
+
 export default function CalculatorPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
 
   // Acquisition
   const [price, setPrice] = useState(150000);
@@ -59,77 +128,80 @@ export default function CalculatorPage() {
     if (loyer > 0) setRent(Math.round(loyer));
   }, []);
 
-  const r = useMemo(() => {
-    const notaire = price * (notairePct / 100);
-    const total = price + notaire + works + furnishing;
-    const loan = Math.max(0, total - down);
-    const mr = rate / 100 / 12;
-    const n = term * 12;
-    const payment = loan <= 0 ? 0 : mr === 0 ? loan / n : (loan * mr) / (1 - Math.pow(1 + mr, -n));
-    const annualRent = rent * 12;
-    const monthlyCharges = taxe / 12 + copro + rent * (mgmtPct / 100) + insurance + rent * (vacancyPct / 100);
-    const netOpsM = rent - monthlyCharges; // before mortgage
-    const cashflowM = netOpsM - payment;
-    const grossYield = total > 0 ? (annualRent / total) * 100 : 0;
-    const netYield = total > 0 ? (netOpsM * 12) / total * 100 : 0;
-    const cashInvested = down > 0 ? down + notaire * 0 : total; // apport is the cash in
-    const coc = cashInvested > 0 ? (cashflowM * 12) / cashInvested * 100 : 0;
-    return { notaire, total, loan, payment, monthlyCharges, cashflowM, grossYield, netYield, coc };
-  }, [price, notairePct, works, furnishing, rent, taxe, copro, mgmtPct, insurance, vacancyPct, down, rate, term]);
+  const input: SimInput = {
+    price, notairePct, works, furnishing, rent, taxe, copro, mgmtPct, insurance,
+    vacancyPct, down, rate, term, holdYears, rentGrowth, appreciation, sellCosts, tmi, regime,
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sim = useMemo(() => simulate(input), Object.values(input));
+  const r = sim;
+  const proj = sim;
 
-  const proj = useMemo(() => {
-    const mr = rate / 100 / 12;
-    const nTotal = term * 12;
-    const annualPayment = r.payment * 12;
-    const abatement = regime === 'lmnp' ? 0.5 : 0.3;
-    const taxRate = tmi / 100 + 0.172; // marginal income tax + social levies
-    const cfs: number[] = [-down];
-    let rentM = rent;
-    for (let y = 1; y <= holdYears; y++) {
-      const annualRent = rentM * 12;
-      const noi = annualRent - r.monthlyCharges * 12;
-      const tax = Math.max(0, annualRent * (1 - abatement)) * taxRate;
-      let cf = noi - annualPayment - tax;
-      if (y === holdYears) {
-        const saleNet = price * Math.pow(1 + appreciation / 100, holdYears) * (1 - sellCosts / 100);
-        cf += saleNet - remainingBalance(r.loan, mr, nTotal, holdYears * 12);
-      }
-      cfs.push(cf);
-      rentM *= 1 + rentGrowth / 100;
-    }
-    const irrDec = irr(cfs);
-    const exitValue = price * Math.pow(1 + appreciation / 100, holdYears);
-    const totalProfit = cfs.reduce((s, c) => s + c, 0);
-    const y1Tax = Math.max(0, rent * 12 * (1 - abatement)) * taxRate;
-    const netCfM = (rent * 12 - r.monthlyCharges * 12 - annualPayment - y1Tax) / 12;
-    return { irrPct: irrDec != null ? irrDec * 100 : null, exitValue, totalProfit, netCfM };
-  }, [r, price, rent, rate, term, down, holdYears, rentGrowth, appreciation, sellCosts, tmi, regime]);
+  // IRR sensitivity grid: financing rate × annual appreciation.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sens = useMemo(
+    () => SENS_RATES.map((rt) => ({
+      rate: rt,
+      cells: SENS_APPRECS.map((ap) => simulate({ ...input, rate: rt, appreciation: ap }).irrPct),
+    })),
+    Object.values(input),
+  );
+
+  const downloadExcel = () => {
+    const eur = (v: number) => formatEUR(Math.round(v), locale);
+    exportCalculatorXlsx({
+      fileName: `bloominder-rendement-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      title: t.calcTitle,
+      generatedLabel: `${t.xlsGenerated} ${new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB')}`,
+      sectionInputs: t.xlsInputs,
+      sectionResults: t.xlsResults,
+      sectionSchedule: t.xlsSchedule,
+      inputs: [
+        { label: t.fPrice, value: eur(price) },
+        { label: t.fNotaire, value: `${notairePct} %` },
+        { label: t.fWorks, value: eur(works) },
+        { label: t.fFurnishing, value: eur(furnishing) },
+        { label: t.fRent, value: `${eur(rent)} /mo` },
+        { label: t.fTaxe, value: eur(taxe) },
+        { label: t.fCopro, value: `${eur(copro)} /mo` },
+        { label: t.fMgmt, value: `${mgmtPct} %` },
+        { label: t.fInsurance, value: `${eur(insurance)} /mo` },
+        { label: t.fVacancy, value: `${vacancyPct} %` },
+        { label: t.fDown, value: eur(down) },
+        { label: t.fRate, value: `${rate} %` },
+        { label: t.fTerm, value: `${term} ${t.yearsUnit}` },
+        { label: t.fHolding, value: `${holdYears} ${t.yearsUnit}` },
+        { label: t.fRentGrowth, value: `${rentGrowth} %` },
+        { label: t.fAppreciation, value: `${appreciation} %` },
+        { label: t.fSellingCosts, value: `${sellCosts} %` },
+        { label: t.fTMI, value: `${tmi} %` },
+        { label: t.fRegime, value: regime === 'lmnp' ? t.regimeLMNP : t.regimeNu },
+      ],
+      results: [
+        { label: t.rTotalCost, value: eur(sim.total) },
+        { label: t.rLoan, value: eur(sim.loan) },
+        { label: t.rPayment, value: `${eur(sim.payment)} /mo` },
+        { label: t.rChargesM, value: `${eur(sim.monthlyCharges)} /mo` },
+        { label: t.rGross, value: `${sim.grossYield.toFixed(1)} %` },
+        { label: t.rNet, value: `${sim.netYield.toFixed(1)} %` },
+        { label: t.rCoC, value: `${sim.coc.toFixed(1)} %` },
+        { label: t.rDSCR, value: sim.dscr != null ? sim.dscr.toFixed(2) : '—' },
+        { label: t.rBreakeven, value: sim.breakEvenOcc != null ? `${sim.breakEvenOcc.toFixed(0)} %` : '—' },
+        { label: t.rCashflowM, value: `${eur(sim.cashflowM)} /mo` },
+        { label: t.rOutOfPocket, value: sim.netCfM >= 0 ? `0 € · ${t.selfFunded}` : `${eur(-sim.netCfM)} /mo` },
+        { label: t.rExitValue, value: eur(sim.exitValue) },
+        { label: t.rTotalProfit, value: eur(sim.totalProfit) },
+        { label: `${t.rIRR} · ${holdYears}${t.yearsUnit}`, value: sim.irrPct != null ? `${sim.irrPct.toFixed(1)} %` : '—' },
+      ],
+      schedule: sim.schedule,
+      scheduleHeaders: [t.colYear, t.colRentAnnual, t.colInterest, t.colPrincipal, t.colBalance, t.colTaxYr, t.rCashflowY],
+      disclaimer: t.xlsDisclaimer,
+    });
+  };
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:gap-6 sm:px-6">
-        <a href="/" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c1.9 1.4 2.7 3.2 2.7 4.7 0 1.6-1 2.9-2.7 3.4-1.7-.5-2.7-1.8-2.7-3.4C9.3 6.2 10.1 4.4 12 3Zm6.4 5.4c.4 2.3-.4 4.2-1.6 5.2-1.4 1.1-3 1-4.3-.2 0-1.8 1-3.2 2.5-3.8 1.5-.6 2.9-.6 3.4-1.2ZM5.6 8.4c.5.6 1.9.6 3.4 1.2 1.5.6 2.5 2 2.5 3.8-1.3 1.2-2.9 1.3-4.3.2-1.2-1-2-2.9-1.6-5.2ZM12 12.5c1 .7 1.5 1.7 1.5 2.7v6.3h-3v-6.3c0-1 .5-2 1.5-2.7Z" />
-            </svg>
-          </span>
-          <span className="text-lg font-semibold tracking-tight">Bloominder</span>
-        </a>
-        <nav className="flex items-center gap-1 text-sm">
-          <a href="/" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.mapTab}</a>
-          <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.markets}</a>
-          <a href="/calculateur" className="rounded-lg px-3 py-1.5 font-medium text-brand-700">{t.calculator}</a>
-        </nav>
-        <div className="ml-auto flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
-          {(['fr', 'en'] as const).map((l) => (
-            <button key={l} onClick={() => setLocale(l)}
-              className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500'}`}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </header>
+      <SubNav active="calculator" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.calcTitle}</h1>
@@ -188,6 +260,8 @@ export default function CalculatorPage() {
               <Row label={t.rGross} value={`${r.grossYield.toFixed(1)}%`} />
               <Row label={t.rNet} value={`${r.netYield.toFixed(1)}%`} strong />
               <Row label={t.rCoC} value={`${r.coc.toFixed(1)}%`} />
+              <Row label={t.rDSCR} value={sim.dscr != null ? sim.dscr.toFixed(2) : '—'} />
+              <Row label={t.rBreakeven} value={sim.breakEvenOcc != null ? `${sim.breakEvenOcc.toFixed(0)}%` : '—'} />
               <div className="my-2 border-t border-slate-100" />
               <div className="rounded-xl p-3" style={{ background: r.cashflowM >= 0 ? '#ecfdf5' : '#fef2f2' }}>
                 <div className="flex items-center justify-between">
@@ -215,6 +289,52 @@ export default function CalculatorPage() {
               <Row label={t.rTotalProfit} value={formatEUR(Math.round(proj.totalProfit), locale)} strong />
               <Row label={`${t.rIRR} · ${holdYears}a`} value={proj.irrPct != null ? `${proj.irrPct.toFixed(1)}%` : '—'} strong />
             </div>
+
+            <button
+              onClick={downloadExcel}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {t.downloadExcel}
+            </button>
+          </div>
+        </div>
+
+        {/* IRR sensitivity grid */}
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
+          <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.sensTitle}</h2>
+          <p className="mb-3 text-xs text-slate-500">{t.sensSubtitle}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[420px] text-center text-sm">
+              <thead>
+                <tr className="text-xs text-slate-400">
+                  <th className="p-2 text-left font-medium">{t.sensRateLabel} \ {t.sensApprecLabel}</th>
+                  {SENS_APPRECS.map((ap) => <th key={ap} className="p-2 font-medium">{ap}%</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {sens.map((row) => (
+                  <tr key={row.rate} className="border-t border-slate-50">
+                    <td className="p-2 text-left font-medium text-slate-600">{row.rate}%</td>
+                    {row.cells.map((v, j) => (
+                      <td key={j} className="p-2">
+                        <span
+                          className="inline-block min-w-[48px] rounded-md px-2 py-1 text-xs font-semibold"
+                          style={{
+                            background: v == null ? '#f1f5f9' : v >= 8 ? '#d1fae5' : v >= 4 ? '#fef9c3' : '#fee2e2',
+                            color: v == null ? '#94a3b8' : v >= 8 ? '#047857' : v >= 4 ? '#a16207' : '#b91c1c',
+                          }}
+                        >
+                          {v != null ? `${v.toFixed(1)}%` : '—'}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

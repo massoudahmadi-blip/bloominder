@@ -8,6 +8,7 @@ import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
 import { EnergyBadge } from '@/components/EnergyBadge';
+import { SubNav } from '@/components/SubNav';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -16,7 +17,7 @@ const ENERGY_COLORS: Record<string, string> = {
 const ENERGY_ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
 export default function CommunePage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams();
   const code = String(params.code);
   const [data, setData] = useState<CommuneProfile | null>(null);
@@ -59,25 +60,7 @@ export default function CommunePage() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:gap-6 sm:px-6">
-        <a href="/" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c1.9 1.4 2.7 3.2 2.7 4.7 0 1.6-1 2.9-2.7 3.4-1.7-.5-2.7-1.8-2.7-3.4C9.3 6.2 10.1 4.4 12 3Zm6.4 5.4c.4 2.3-.4 4.2-1.6 5.2-1.4 1.1-3 1-4.3-.2 0-1.8 1-3.2 2.5-3.8 1.5-.6 2.9-.6 3.4-1.2ZM5.6 8.4c.5.6 1.9.6 3.4 1.2 1.5.6 2.5 2 2.5 3.8-1.3 1.2-2.9 1.3-4.3.2-1.2-1-2-2.9-1.6-5.2ZM12 12.5c1 .7 1.5 1.7 1.5 2.7v6.3h-3v-6.3c0-1 .5-2 1.5-2.7Z" />
-            </svg>
-          </span>
-          <span className="text-lg font-semibold tracking-tight">Bloominder</span>
-        </a>
-        <a href="/screener" className="text-sm font-medium text-slate-500 hover:text-brand-700">{t.profileBack}</a>
-        <div className="ml-auto flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
-          {(['fr', 'en'] as const).map((l) => (
-            <button key={l} onClick={() => setLocale(l)}
-              className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500'}`}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </header>
+      <SubNav active="markets" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         {loading ? (

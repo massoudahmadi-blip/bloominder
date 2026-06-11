@@ -4,9 +4,14 @@ import { useEffect, useState } from 'react';
 import { getStats } from '@/lib/api';
 import { StatsData, TopCommune } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
+import { SubNav } from '@/components/SubNav';
+import { AreaChart, BarChart, Donut, RadialWheel, Pyramid } from '@/components/Charts';
+
+const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function StatsPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
   const [d, setD] = useState<StatsData | null>(null);
 
   useEffect(() => { getStats().then(setD).catch(() => {}); }, []);
@@ -16,29 +21,11 @@ export default function StatsPage() {
     style: 'currency', currency: 'EUR', notation: 'compact', maximumFractionDigits: 1,
   }).format(v);
   const maxType = Math.max(1, ...(d?.byType ?? []).map((x) => x.ventes));
+  const months = locale === 'fr' ? MONTHS_FR : MONTHS_EN;
 
   return (
     <div className="min-h-[100dvh] bg-stone-50">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:gap-6 sm:px-6">
-        <a href="/" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c1.9 1.4 2.7 3.2 2.7 4.7 0 1.6-1 2.9-2.7 3.4-1.7-.5-2.7-1.8-2.7-3.4C9.3 6.2 10.1 4.4 12 3Zm6.4 5.4c.4 2.3-.4 4.2-1.6 5.2-1.4 1.1-3 1-4.3-.2 0-1.8 1-3.2 2.5-3.8 1.5-.6 2.9-.6 3.4-1.2ZM5.6 8.4c.5.6 1.9.6 3.4 1.2 1.5.6 2.5 2 2.5 3.8-1.3 1.2-2.9 1.3-4.3.2-1.2-1-2-2.9-1.6-5.2ZM12 12.5c1 .7 1.5 1.7 1.5 2.7v6.3h-3v-6.3c0-1 .5-2 1.5-2.7Z" /></svg>
-          </span>
-          <span className="font-serif text-xl font-semibold tracking-tight">Bloominder</span>
-        </a>
-        <nav className="hidden items-center gap-1 text-sm md:flex">
-          <a href="/" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100">{t.mapTab}</a>
-          <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100">{t.markets}</a>
-          <a href="/stats" className="rounded-lg px-3 py-1.5 font-medium text-brand-700">{t.navStats}</a>
-          <a href="/calculateur" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100">{t.calculator}</a>
-          <a href="/estimation" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100">{t.navEstimate}</a>
-        </nav>
-        <div className="ml-auto flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
-          {(['fr', 'en'] as const).map((l) => (
-            <button key={l} onClick={() => setLocale(l)} className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500'}`}>{l}</button>
-          ))}
-        </div>
-      </header>
+      <SubNav active="stats" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.statsTitle}</h1>
@@ -52,6 +39,55 @@ export default function StatsPage() {
             <Stat label="2014 → 2025" value={`${(d.totals.min_date || '').slice(0, 4)}–${(d.totals.max_date || '').slice(0, 4)}`} />
           </div>
         )}
+
+        {/* Price trend + volume by year */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card title={t.priceTrendTitle}>
+            <AreaChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee), value: y.median_m2 }))} unit=" €" />
+          </Card>
+          <Card title={t.volumeByYearTitle}>
+            <BarChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee).slice(2), value: y.volume }))} />
+          </Card>
+        </div>
+
+        {/* Donut share + price-band pyramid */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card title={t.salesShareTitle}>
+            <Donut data={(d?.byType ?? []).map((x) => ({ label: (t as any)[x.type] ?? x.type, value: x.ventes }))} />
+          </Card>
+          <Card title={t.priceBandsTitle}>
+            <Pyramid data={(d?.priceBands ?? []).map((b) => ({ label: b.label, value: b.ventes }))} />
+          </Card>
+        </div>
+
+        {/* Radial wheel of departments + seasonality */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card title={t.topDeptsTitle}>
+            <RadialWheel data={(d?.byDept ?? []).slice(0, 12).map((x) => ({ label: x.dept, value: x.ventes }))} />
+          </Card>
+          <Card title={t.seasonalityTitle}>
+            <BarChart data={(d?.byMonth ?? []).map((m) => ({ label: months[m.mois - 1] ?? String(m.mois), value: m.ventes }))} color="#6366f1" />
+          </Card>
+        </div>
+
+        {/* Affordability + liquidity */}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card title={t.affordTitle}>
+            <div className="grid grid-cols-2 gap-4">
+              <RankList label={t.affordBest} rows={(d?.affordability?.best ?? []).map((r) => ({ code: r.code_commune, name: r.nom_commune, dep: r.code_departement, val: `${r.years} ${t.yearsUnit}` }))} />
+              <RankList label={t.affordWorst} rows={(d?.affordability?.worst ?? []).map((r) => ({ code: r.code_commune, name: r.nom_commune, dep: r.code_departement, val: `${r.years} ${t.yearsUnit}` }))} />
+            </div>
+          </Card>
+          <Card title={t.liquidityTitle}>
+            {d?.liquidity?.national_median != null && (
+              <div className="mb-3 text-xs text-slate-500">{t.nationalMedian}: <span className="font-semibold text-slate-800">{d.liquidity.national_median} {t.daysUnit}</span></div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <RankList label={t.liquidFast} rows={(d?.liquidity?.fastest ?? []).map((r) => ({ code: r.code_commune, name: r.nom_commune, dep: r.code_departement, val: `${r.days} ${t.daysUnit}` }))} />
+              <RankList label={t.liquidSlow} rows={(d?.liquidity?.slowest ?? []).map((r) => ({ code: r.code_commune, name: r.nom_commune, dep: r.code_departement, val: `${r.days} ${t.daysUnit}` }))} />
+            </div>
+          </Card>
+        </div>
 
         {/* By type + by dept */}
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -97,6 +133,25 @@ export default function StatsPage() {
           <TopList title={t.topTurnoverTitle} rows={d?.topTurnover ?? []} render={(r) => nf.format(r.resales ?? 0)} locale={locale} />
         </div>
       </main>
+    </div>
+  );
+}
+
+function RankList({ label, rows }: { label: string; rows: { code: string; name: string; dep: string; val: string }[] }) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</div>
+      <ol className="space-y-1 text-sm">
+        {rows.map((r, i) => (
+          <li key={r.code}>
+            <a href={`/commune/${r.code}`} className="flex items-center justify-between rounded-lg px-1.5 py-1 hover:bg-slate-50">
+              <span className="min-w-0 truncate"><span className="mr-1.5 text-slate-400">{i + 1}.</span>{r.name}</span>
+              <span className="shrink-0 pl-2 font-semibold tabular-nums text-slate-800">{r.val}</span>
+            </a>
+          </li>
+        ))}
+        {rows.length === 0 && <li className="px-1.5 text-slate-300">—</li>}
+      </ol>
     </div>
   );
 }

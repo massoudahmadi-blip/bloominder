@@ -57,10 +57,29 @@ export interface TopCommune {
   median_gain_pct?: number | null;
 }
 
+export interface AffordRow {
+  code_commune: string;
+  nom_commune: string;
+  code_departement: string;
+  years: number;
+}
+
+export interface LiquidityRow {
+  code_commune: string;
+  nom_commune: string;
+  code_departement: string;
+  days: number;
+}
+
 export interface StatsData {
   totals: { ventes: number; volume: number; communes: number; min_date: string; max_date: string } | null;
   byType: { type: string; ventes: number; median_m2: number | null }[];
   byDept: { dept: string; ventes: number; volume: number; median_m2: number | null }[];
+  byYear: { annee: number; ventes: number; volume: number; median_m2: number | null }[];
+  byMonth: { mois: number; ventes: number }[];
+  priceBands: { ord: number; label: string; ventes: number }[];
+  affordability: { best: AffordRow[]; worst: AffordRow[] } | null;
+  liquidity: { fastest: LiquidityRow[]; slowest: LiquidityRow[]; national_median: number | null } | null;
   topSales: TopCommune[];
   topVolume: TopCommune[];
   topTurnover: TopCommune[];

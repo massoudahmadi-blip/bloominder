@@ -143,6 +143,83 @@ SELECT 'by_type', jsonb_agg(x) FROM (
          round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000)) AS median_m2
   FROM transactions WHERE nature_mutation='Vente'
   GROUP BY type_local ORDER BY ventes DESC LIMIT 8) x;
+
+-- Annual market trend (mutation grain): volume, sales count, median €/m².
+INSERT INTO stats(key,data)
+SELECT 'by_year', jsonb_agg(x ORDER BY x.annee) FROM (
+  SELECT extract(year FROM date_mutation)::int AS annee,
+         count(*) AS ventes,
+         round(sum(valeur_fonciere)) AS volume,
+         round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000)) AS median_m2
+  FROM (
+    SELECT date_mutation, valeur_fonciere,
+           CASE WHEN sum(surface_bati) > 5 THEN valeur_fonciere / sum(surface_bati) END AS prix_m2
+    FROM transactions
+    WHERE nature_mutation='Vente' AND valeur_fonciere > 0
+    GROUP BY code_commune, date_mutation, valeur_fonciere
+  ) mut
+  WHERE extract(year FROM date_mutation) >= 2014
+  GROUP BY annee) x;
+
+-- Seasonality: share of sales by calendar month (mutation grain).
+INSERT INTO stats(key,data)
+SELECT 'by_month', jsonb_agg(x ORDER BY x.mois) FROM (
+  SELECT extract(month FROM date_mutation)::int AS mois, count(*) AS ventes
+  FROM (
+    SELECT date_mutation FROM transactions
+    WHERE nature_mutation='Vente' AND valeur_fonciere > 0
+    GROUP BY code_commune, date_mutation, valeur_fonciere
+  ) mut
+  GROUP BY mois) x;
+
+-- Price-band distribution (the "pyramid"), mutation grain.
+INSERT INTO stats(key,data)
+SELECT 'price_bands', jsonb_agg(x ORDER BY x.ord) FROM (
+  SELECT b.ord, b.label, count(*) AS ventes
+  FROM (
+    SELECT valeur_fonciere FROM transactions
+    WHERE nature_mutation='Vente' AND valeur_fonciere > 0
+    GROUP BY code_commune, date_mutation, valeur_fonciere
+  ) mut
+  CROSS JOIN LATERAL (SELECT
+    CASE WHEN valeur_fonciere<100000 THEN 1 WHEN valeur_fonciere<200000 THEN 2
+         WHEN valeur_fonciere<300000 THEN 3 WHEN valeur_fonciere<500000 THEN 4
+         WHEN valeur_fonciere<1000000 THEN 5 ELSE 6 END AS ord,
+    CASE WHEN valeur_fonciere<100000 THEN '< 100 k€' WHEN valeur_fonciere<200000 THEN '100–200 k€'
+         WHEN valeur_fonciere<300000 THEN '200–300 k€' WHEN valeur_fonciere<500000 THEN '300–500 k€'
+         WHEN valeur_fonciere<1000000 THEN '500 k–1 M€' ELSE '> 1 M€' END AS label
+  ) b
+  GROUP BY b.ord, b.label) x;
+
+-- Affordability: years of local median income to buy a 70 m² apartment.
+INSERT INTO stats(key,data)
+SELECT 'affordability', jsonb_build_object(
+  'best',  (SELECT jsonb_agg(y) FROM (
+     SELECT m.code_commune, m.nom_commune, m.code_departement,
+            round((m.median_prix_m2_appartement*70/d.median_income)::numeric,1) AS years
+     FROM commune_metrics m JOIN commune_demo d USING(code_commune)
+     WHERE d.median_income>0 AND m.median_prix_m2_appartement>0 AND m.ventes_total>=100
+     ORDER BY years ASC LIMIT 10) y),
+  'worst', (SELECT jsonb_agg(y) FROM (
+     SELECT m.code_commune, m.nom_commune, m.code_departement,
+            round((m.median_prix_m2_appartement*70/d.median_income)::numeric,1) AS years
+     FROM commune_metrics m JOIN commune_demo d USING(code_commune)
+     WHERE d.median_income>0 AND m.median_prix_m2_appartement>0 AND m.ventes_total>=100
+     ORDER BY years DESC LIMIT 10) y));
+
+-- Market liquidity: fastest / slowest markets (DPE→deed delay proxy, days).
+INSERT INTO stats(key,data)
+SELECT 'liquidity', jsonb_build_object(
+  'fastest', (SELECT jsonb_agg(y) FROM (
+     SELECT code_commune, nom_commune, code_departement, median_days_to_sell AS days
+     FROM commune_metrics WHERE median_days_to_sell IS NOT NULL AND ventes_total>=100
+     ORDER BY median_days_to_sell ASC LIMIT 10) y),
+  'slowest', (SELECT jsonb_agg(y) FROM (
+     SELECT code_commune, nom_commune, code_departement, median_days_to_sell AS days
+     FROM commune_metrics WHERE median_days_to_sell IS NOT NULL AND ventes_total>=100
+     ORDER BY median_days_to_sell DESC LIMIT 10) y),
+  'national_median', (SELECT round(percentile_cont(0.5) WITHIN GROUP (ORDER BY median_days_to_sell))
+     FROM commune_metrics WHERE median_days_to_sell IS NOT NULL));
 SQL
 
 echo ">> Computing commune_scores (default weights: yield .45 / growth .35 / demand .20)..."

@@ -6,6 +6,7 @@ import { getScreener } from '@/lib/api';
 import { CommuneRow, ScreenerSort } from '@/lib/types';
 import { formatEUR } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
+import { SubNav } from '@/components/SubNav';
 
 function scoreColor(v: number | null): string {
   if (v == null) return '#94a3b8';
@@ -29,7 +30,7 @@ const pct = (v: number | null, sign = false) =>
   v == null ? '—' : `${sign && v > 0 ? '+' : ''}${v}%`;
 
 export default function ScreenerPage() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [rows, setRows] = useState<CommuneRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -94,30 +95,7 @@ export default function ScreenerPage() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
-      {/* Top bar */}
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:gap-6 sm:px-6">
-        <a href="/" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3c1.9 1.4 2.7 3.2 2.7 4.7 0 1.6-1 2.9-2.7 3.4-1.7-.5-2.7-1.8-2.7-3.4C9.3 6.2 10.1 4.4 12 3Zm6.4 5.4c.4 2.3-.4 4.2-1.6 5.2-1.4 1.1-3 1-4.3-.2 0-1.8 1-3.2 2.5-3.8 1.5-.6 2.9-.6 3.4-1.2ZM5.6 8.4c.5.6 1.9.6 3.4 1.2 1.5.6 2.5 2 2.5 3.8-1.3 1.2-2.9 1.3-4.3.2-1.2-1-2-2.9-1.6-5.2ZM12 12.5c1 .7 1.5 1.7 1.5 2.7v6.3h-3v-6.3c0-1 .5-2 1.5-2.7Z" />
-            </svg>
-          </span>
-          <span className="text-lg font-semibold tracking-tight">Bloominder</span>
-        </a>
-        <nav className="flex items-center gap-1 text-sm">
-          <a href="/" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.mapTab}</a>
-          <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-brand-700">{t.markets}</a>
-          <a href="/calculateur" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.calculator}</a>
-        </nav>
-        <div className="ml-auto flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
-          {(['fr', 'en'] as const).map((l) => (
-            <button key={l} onClick={() => setLocale(l)}
-              className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500'}`}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </header>
+      <SubNav active="markets" />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.screenerTitle}</h1>
