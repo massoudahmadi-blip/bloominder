@@ -127,6 +127,13 @@ CREATE TABLE IF NOT EXISTS commune_livability (
   fiber_pct             numeric,   -- % of premises FttH-connectable (ARCEP)
   updated_at            timestamptz DEFAULT now()
 );
+-- Columns added after this table first shipped (CREATE IF NOT EXISTS won't add them to existing DBs).
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS crime_rate      numeric;
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS doctors         numeric;
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS health_equip    int;
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS transport_equip int;
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS total_equip     int;
+ALTER TABLE commune_livability ADD COLUMN IF NOT EXISTS fiber_pct       numeric;
 
 -- Environmental risks per commune (Géorisques).
 CREATE TABLE IF NOT EXISTS commune_risk (
