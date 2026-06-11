@@ -62,11 +62,43 @@ const selectedLayer: any = {
   },
 };
 
+const parcelFill: any = {
+  id: 'parcel-fill',
+  type: 'fill',
+  paint: { 'fill-color': '#0d9488', 'fill-opacity': 0.18 },
+};
+const parcelLine: any = {
+  id: 'parcel-line',
+  type: 'line',
+  paint: { 'line-color': '#0d9488', 'line-width': 2.5 },
+};
+
 interface ClusterMarker {
   id: number;
   count: number;
   lon: number;
   lat: number;
+}
+
+// --- Cadastre parcel lookup (IGN Géoplateforme WFS, GeoJSON lon/lat) ---
+function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (((yi > lat) !== (yj > lat)) && (lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function pointInPolygon(lon: number, lat: number, rings: number[][][]): boolean {
+  if (!rings.length || !pointInRing(lon, lat, rings[0])) return false;
+  for (let k = 1; k < rings.length; k++) if (pointInRing(lon, lat, rings[k])) return false; // holes
+  return true;
+}
+function pointInGeometry(lon: number, lat: number, geom: any): boolean {
+  if (!geom) return false;
+  if (geom.type === 'Polygon') return pointInPolygon(lon, lat, geom.coordinates);
+  if (geom.type === 'MultiPolygon') return geom.coordinates.some((p: number[][][]) => pointInPolygon(lon, lat, p));
+  return false;
 }
 
 export function PropertyMap({
@@ -88,6 +120,7 @@ export function PropertyMap({
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
   const [hovered, setHovered] = useState<Sale | null>(null);
+  const [parcel, setParcel] = useState<any | null>(null);
   const overCard = useRef(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -148,11 +181,29 @@ export function PropertyMap({
     emitBounds();
   }, [emitBounds, refreshClusters]);
 
-  // Fly to a searched address.
+  // Fly to a searched address and highlight the cadastral parcel under it.
   useEffect(() => {
     if (!focus) return;
     const map = mapRef.current?.getMap();
-    map?.flyTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.getZoom(), 14.5), duration: 900 });
+    map?.flyTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.getZoom(), 16.5), duration: 900 });
+
+    let cancelled = false;
+    const { lon, lat } = focus;
+    const d = 0.0009; // ~90 m box around the point (bbox is lat,lon for WFS 2.0 / EPSG:4326)
+    const url =
+      'https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature' +
+      '&typeNames=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle&outputFormat=application/json' +
+      `&srsName=EPSG:4326&count=40&bbox=${lat - d},${lon - d},${lat + d},${lon + d}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.features?.length) return setParcel(null);
+        const hit = json.features.find((f: any) => pointInGeometry(lon, lat, f.geometry)) ?? null;
+        setParcel(hit);
+        if (hit) setParcels(true); // reveal the cadastre tiles for context
+      })
+      .catch(() => !cancelled && setParcel(null));
+    return () => { cancelled = true; };
   }, [focus]);
 
   const handleClick = (e: MapLayerMouseEvent) => {
@@ -242,6 +293,14 @@ export function PropertyMap({
             attribution="© IGN — Parcellaire Express"
           >
             <Layer id="cadastre-lyr" type="raster" paint={{ 'raster-opacity': 0.7 }} beforeId="unclustered-point" />
+          </Source>
+        )}
+
+        {/* Highlighted parcel under a searched address */}
+        {parcel && (
+          <Source id="parcel" type="geojson" data={parcel}>
+            <Layer {...parcelFill} beforeId="unclustered-point" />
+            <Layer {...parcelLine} beforeId="unclustered-point" />
           </Source>
         )}
 
@@ -343,6 +402,29 @@ export function PropertyMap({
         </svg>
         {t.parcels}
       </button>
+
+      {/* Parcel info chip for a searched address */}
+      {parcel && (
+        <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full bg-white/95 px-4 py-2 shadow-panel backdrop-blur">
+          <svg className="h-4 w-4 shrink-0 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+          </svg>
+          <div className="text-sm">
+            <span className="font-semibold text-slate-900">
+              {t.parcelLabel} {parcel.properties?.section ?? ''} {parcel.properties?.numero ?? ''}
+            </span>
+            {parcel.properties?.contenance != null && (
+              <span className="ml-2 text-slate-500">· {t.land} {formatM2(Number(parcel.properties.contenance))}</span>
+            )}
+            {parcel.properties?.nom_com && (
+              <span className="ml-2 text-slate-400">· {parcel.properties.nom_com}</span>
+            )}
+          </div>
+          <button onClick={() => setParcel(null)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
