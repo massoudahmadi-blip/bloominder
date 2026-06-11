@@ -71,7 +71,7 @@ export default function AdressePage() {
   const s = city?.scores;
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <div className="no-print"><SubNav active="markets" /></div>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">

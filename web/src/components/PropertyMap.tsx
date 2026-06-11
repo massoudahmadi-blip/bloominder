@@ -20,24 +20,34 @@ import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
 import { EnergyBadge } from './EnergyBadge';
 
-// Clean light basemap from CARTO (free, attribution required). No glyphs needed because
-// we have no symbol layers — cluster counts are rendered as HTML markers.
-const MAP_STYLE: any = {
-  version: 8,
-  sources: {
-    carto: {
-      type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '© OpenStreetMap, © CARTO',
+// FR → official IGN "Plan v2" (roads, forests, rivers, French labels; France only).
+// EN → CARTO Voyager (roads/water/parks with international labels).
+const IGN_PLAN =
+  'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}';
+const CARTO_VOYAGER = [
+  'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+];
+
+// Metropolitan France (incl. Corsica) — used to keep the view inside France.
+const FRANCE_BOUNDS: [[number, number], [number, number]] = [[-5.8, 41.0], [10.2, 51.6]];
+
+function buildStyle(locale: string): any {
+  const fr = locale === 'fr';
+  return {
+    version: 8,
+    sources: {
+      base: {
+        type: 'raster',
+        tiles: fr ? [IGN_PLAN] : CARTO_VOYAGER,
+        tileSize: 256,
+        attribution: fr ? '© IGN — Géoplateforme' : '© OpenStreetMap, © CARTO',
+      },
     },
-  },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
-};
+    layers: [{ id: 'base', type: 'raster', source: 'base' }],
+  };
+}
 
 const unclusteredLayer: any = {
   id: 'unclustered-point',
@@ -98,6 +108,7 @@ export function PropertyMap({
   const { t, locale } = useI18n();
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
+  const mapStyle = useMemo(() => buildStyle(locale), [locale]);
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
@@ -254,8 +265,11 @@ export function PropertyMap({
     <div className="relative h-full w-full">
       <MapGL
         ref={mapRef}
-        initialViewState={{ longitude: 4.7, latitude: 43.8, zoom: 9.5 }}
-        mapStyle={MAP_STYLE}
+        initialViewState={{ longitude: 2.55, latitude: 46.6, zoom: 5.2 }}
+        mapStyle={mapStyle}
+        maxBounds={FRANCE_BOUNDS}
+        minZoom={4.8}
+        maxZoom={18}
         interactiveLayerIds={['unclustered-point']}
         cursor={cursor}
         onLoad={handleLoad}

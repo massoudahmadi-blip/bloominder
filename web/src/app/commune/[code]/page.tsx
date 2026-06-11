@@ -61,7 +61,7 @@ export default function CommunePage() {
   const vvMax = Math.max(1, ...vv.map((x) => x.median_eur_m2 as number));
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <SubNav active="markets" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">

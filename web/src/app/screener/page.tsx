@@ -96,7 +96,7 @@ export default function ScreenerPage() {
   );
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <SubNav active="markets" />
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">

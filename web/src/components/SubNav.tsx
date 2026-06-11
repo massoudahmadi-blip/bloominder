@@ -1,6 +1,7 @@
 'use client';
 
 import { useI18n } from '@/lib/i18n';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 type Tab = 'map' | 'markets' | 'stats' | 'calculator' | 'estimate';
 
@@ -41,16 +42,19 @@ export function SubNav({ active }: { active: Tab }) {
           </a>
         ))}
       </nav>
-      <div className="ml-auto flex shrink-0 items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
-        {(['fr', 'en'] as const).map((l) => (
-          <button
-            key={l}
-            onClick={() => setLocale(l)}
-            className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            {l}
-          </button>
-        ))}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <ThemeSwitcher />
+        <div className="flex items-center rounded-full border border-slate-200 bg-slate-50 p-0.5 text-xs font-medium">
+          {(['fr', 'en'] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              className={`rounded-full px-3 py-1.5 uppercase transition ${locale === l ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
       </div>
     </header>
   );

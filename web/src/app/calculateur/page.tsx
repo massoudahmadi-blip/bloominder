@@ -187,7 +187,7 @@ export default function CalculatorPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <SubNav active="calculator" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">

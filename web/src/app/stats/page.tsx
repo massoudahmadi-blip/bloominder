@@ -26,7 +26,7 @@ export default function StatsPage() {
   const months = locale === 'fr' ? MONTHS_FR : MONTHS_EN;
 
   return (
-    <div className="min-h-[100dvh] bg-stone-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <SubNav active="stats" />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">

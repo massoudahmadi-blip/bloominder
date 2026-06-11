@@ -41,6 +41,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${inter.variable} ${fraunces.variable}`}>
+      <head>
+        {/* Apply the saved theme before paint to avoid a flash of the default. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('bloominder-theme')||'editorial';document.documentElement.dataset.theme=t;}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <I18nProvider>{children}</I18nProvider>
       </body>

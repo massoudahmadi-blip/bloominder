@@ -85,7 +85,7 @@ export default function EstimationPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-stone-50">
+    <div className="min-h-[100dvh] bg-canvas">
       <div className="no-print">
         <SubNav active="estimate" />
       </div>
