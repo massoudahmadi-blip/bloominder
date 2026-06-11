@@ -6,6 +6,7 @@ import { StatsData, TopCommune } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
 import { usePageTitle } from '@/lib/useTitle';
+import { useBrandColor } from '@/lib/useBrandColor';
 import { AreaChart, BarChart, Donut, RadialWheel, Pyramid } from '@/components/Charts';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -14,6 +15,7 @@ const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'
 export default function StatsPage() {
   const { t, locale } = useI18n();
   usePageTitle(t.navStats);
+  const brand = useBrandColor();
   const [d, setD] = useState<StatsData | null>(null);
 
   useEffect(() => { getStats().then(setD).catch(() => {}); }, []);
@@ -59,10 +61,10 @@ export default function StatsPage() {
         {/* Price trend + volume by year */}
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card title={t.priceTrendTitle}>
-            <AreaChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee), value: y.median_m2 }))} unit=" €" />
+            <AreaChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee), value: y.median_m2 }))} unit=" €" color={brand} />
           </Card>
           <Card title={t.volumeByYearTitle}>
-            <BarChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee).slice(2), value: y.volume }))} />
+            <BarChart data={(d?.byYear ?? []).map((y) => ({ label: String(y.annee).slice(2), value: y.volume }))} color={brand} />
           </Card>
         </div>
 

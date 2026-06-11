@@ -3,20 +3,18 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Map, { Marker, Source, Layer } from 'react-map-gl/maplibre';
 
+// Official IGN "Plan v2" base (roads, forests, rivers — French) under the cadastre.
 const STYLE: any = {
   version: 8,
   sources: {
-    carto: {
+    base: {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-      ],
+      tiles: ['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'],
       tileSize: 256,
-      attribution: '© OpenStreetMap, © CARTO',
+      attribution: '© IGN — Géoplateforme',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+  layers: [{ id: 'base', type: 'raster', source: 'base' }],
 };
 
 // Small map centred on an address, with the IGN cadastre parcels overlaid and

@@ -22,7 +22,7 @@ function arc(cx: number, cy: number, rIn: number, rOut: number, a0: number, a1: 
 }
 
 /** Area + line chart (e.g. median €/m² by year). */
-export function AreaChart({ data, unit = '' }: { data: { label: string; value: number | null }[]; unit?: string }) {
+export function AreaChart({ data, unit = '', color = BRAND }: { data: { label: string; value: number | null }[]; unit?: string; color?: string }) {
   const pts = data.filter((d) => d.value != null) as { label: string; value: number }[];
   if (pts.length < 2) return <Empty />;
   const W = 520, H = 200, pad = 28;
@@ -36,15 +36,15 @@ export function AreaChart({ data, unit = '' }: { data: { label: string; value: n
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
       <defs>
         <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={BRAND} stopOpacity="0.22" />
-          <stop offset="100%" stopColor={BRAND} stopOpacity="0" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={area} fill="url(#areaFill)" />
-      <path d={line} fill="none" stroke={BRAND} strokeWidth={2.5} strokeLinejoin="round" />
+      <path d={line} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
       {pts.map((p, i) => (
         <g key={p.label}>
-          <circle cx={x(i)} cy={y(p.value)} r={3} fill="#fff" stroke={BRAND} strokeWidth={2} />
+          <circle cx={x(i)} cy={y(p.value)} r={3} fill="#fff" stroke={color} strokeWidth={2} />
           <text x={x(i)} y={H - 8} textAnchor="middle" className="fill-slate-400" fontSize={10}>{p.label}</text>
         </g>
       ))}

@@ -16,6 +16,7 @@ import type { GeoJSONSource } from 'maplibre-gl';
 import { Sale, BBox } from '@/lib/types';
 import { priceM2Color, formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { fetchParcelAt } from '@/lib/cadastre';
+import { useBrandColor } from '@/lib/useBrandColor';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
 import { EnergyBadge } from './EnergyBadge';
@@ -74,17 +75,6 @@ const selectedLayer: any = {
   },
 };
 
-const parcelFill: any = {
-  id: 'parcel-fill',
-  type: 'fill',
-  paint: { 'fill-color': '#0d9488', 'fill-opacity': 0.18 },
-};
-const parcelLine: any = {
-  id: 'parcel-line',
-  type: 'line',
-  paint: { 'line-color': '#0d9488', 'line-width': 2.5 },
-};
-
 interface ClusterMarker {
   id: number;
   count: number;
@@ -109,6 +99,7 @@ export function PropertyMap({
   const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const mapStyle = useMemo(() => buildStyle(locale), [locale]);
+  const brand = useBrandColor('600');
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
@@ -304,14 +295,14 @@ export function PropertyMap({
         {/* Highlighted parcel under a searched address */}
         {parcel && (
           <Source id="parcel" type="geojson" data={parcel}>
-            <Layer {...parcelFill} beforeId="unclustered-point" />
-            <Layer {...parcelLine} beforeId="unclustered-point" />
+            <Layer id="parcel-fill" type="fill" paint={{ 'fill-color': brand, 'fill-opacity': 0.18 }} beforeId="unclustered-point" />
+            <Layer id="parcel-line" type="line" paint={{ 'line-color': brand, 'line-width': 2.5 }} beforeId="unclustered-point" />
           </Source>
         )}
 
         <Source id="sales" type="geojson" data={geojson} cluster clusterRadius={48} clusterMaxZoom={14}>
           <Layer {...unclusteredLayer} />
-          <Layer {...selectedLayer} filter={['==', ['get', 'sid'], selected ? String(selected.id) : '']} />
+          <Layer {...selectedLayer} paint={{ ...selectedLayer.paint, 'circle-color': brand }} filter={['==', ['get', 'sid'], selected ? String(selected.id) : '']} />
         </Source>
 
         {clusters.map((c) => (
