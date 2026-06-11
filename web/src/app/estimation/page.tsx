@@ -9,6 +9,8 @@ import { Sale, CommuneProfile } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
+import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
+import { exportEstimationXlsx } from '@/lib/excel';
 
 export default function EstimationPage() {
   const { t, locale } = useI18n();
@@ -16,6 +18,7 @@ export default function EstimationPage() {
   const [surface, setSurface] = useState(70);
   const [comps, setComps] = useState<Sale[]>([]);
   const [city, setCity] = useState<CommuneProfile | null>(null);
+  const [parcel, setParcel] = useState<ParcelFeature | null>(null);
 
   // Deep-link from the map ("Analyser cette adresse") pre-seeds the report.
   useEffect(() => {
@@ -34,9 +37,10 @@ export default function EstimationPage() {
 
   useEffect(() => {
     if (!addr) return;
-    setComps([]); setCity(null);
+    setComps([]); setCity(null); setParcel(null);
     getComparables(addr.lat, addr.lon).then(setComps).catch(() => {});
     if (addr.citycode) getCommune(addr.citycode).then(setCity).catch(() => {});
+    fetchParcelAt(addr.lon, addr.lat).then(setParcel).catch(() => {});
   }, [addr]);
 
   const m2 = comps.map((c) => c.prix_m2).filter((v): v is number => v != null).sort((a, b) => a - b);
@@ -49,6 +53,39 @@ export default function EstimationPage() {
   const high = p75 != null ? Math.round(p75 * surface) : null;
   const rel = n >= 15 ? t.relHigh : n >= 6 ? t.relMedium : t.relLow;
   const m = city?.metrics;
+
+  const downloadXlsx = () => {
+    if (!addr) return;
+    exportEstimationXlsx({
+      fileName: `bloominder-estimation-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      title: t.estimationTitle,
+      generatedLabel: `${t.xlsGenerated} ${new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB')}`,
+      disclaimer: t.xlsDisclaimer,
+      address: addr.label,
+      surface,
+      estimate: { value, low, high, medianM2: med, reliability: rel, n },
+      parcel: parcel ? {
+        ref: `${parcel.properties.section ?? ''} ${parcel.properties.numero ?? ''}`.trim(),
+        land: parcel.properties.contenance != null ? Number(parcel.properties.contenance) : null,
+      } : null,
+      city: m ? {
+        name: m.nom_commune, scoreGlobal: city?.scores?.score_global ?? null,
+        medianM2: m.median_prix_m2 ?? null, yieldPct: m.rendement_brut_appartement ?? null,
+        population: city?.demo?.population ?? null, income: city?.demo?.median_income ?? null,
+      } : null,
+      comps: comps.slice(0, 15).map((c) => ({
+        date: formatDate(c.date, locale), type: c.type ? ((t as any)[c.type] ?? c.type) : '—',
+        surface: c.surface_bati ?? null, prixM2: c.prix_m2 ?? null, prix: c.prix,
+      })),
+      labels: {
+        sEstimate: t.estValue, sPosition: t.position, sCity: t.cityContext, sComps: t.comparables,
+        estValue: t.estValue, estRange: t.estRange, estPerM2: t.estPerM2, reliability: t.reliability, basedOn: t.basedOn,
+        surface: t.surface, parcelRef: t.parcelLabel, land: t.land,
+        scoreGlobal: t.scoreGlobalLbl, priceM2: t.colPriceM2, yieldLbl: t.kpiYield, population: t.kpiPopulation, income: t.kpiIncome,
+        cDate: t.colDate, cType: t.colType, cSurface: t.surface, cPriceM2: t.colPriceM2, cPrice: t.colPrice,
+      },
+    });
+  };
 
   return (
     <div className="min-h-[100dvh] bg-stone-50">
@@ -65,7 +102,12 @@ export default function EstimationPage() {
             <input type="number" value={surface} onChange={(e) => setSurface(Number(e.target.value) || 0)}
               className="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-400" />
           </label>
-          {addr && <button onClick={() => window.print()} className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">{t.printPdf} / PDF</button>}
+          {addr && (
+            <div className="flex gap-2">
+              <button onClick={() => window.print()} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{t.printPdf} / PDF</button>
+              <button onClick={downloadXlsx} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">{t.downloadExcel}</button>
+            </div>
+          )}
         </div>
 
         {!addr ? (
@@ -90,8 +132,14 @@ export default function EstimationPage() {
             {/* Position + cadastre */}
             <section className="report-card rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
               <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.position}</h2>
-              <p className="mb-3 text-sm text-slate-700">{addr.label}</p>
-              <MiniMap lon={addr.lon} lat={addr.lat} />
+              <p className="text-sm text-slate-700">{addr.label}</p>
+              {parcel && (
+                <p className="mb-3 mt-1 text-xs text-slate-500">
+                  {t.parcelLabel} {parcel.properties.section} {parcel.properties.numero}
+                  {parcel.properties.contenance != null && <> · {t.land} {formatM2(Number(parcel.properties.contenance))}</>}
+                </p>
+              )}
+              <div className="mt-3"><MiniMap lon={addr.lon} lat={addr.lat} /></div>
             </section>
 
             {/* City context */}

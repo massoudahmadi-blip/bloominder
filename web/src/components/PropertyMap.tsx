@@ -15,6 +15,7 @@ import MapGL, {
 import type { GeoJSONSource } from 'maplibre-gl';
 import { Sale, BBox } from '@/lib/types';
 import { priceM2Color, formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
+import { fetchParcelAt } from '@/lib/cadastre';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
 import { EnergyBadge } from './EnergyBadge';
@@ -79,27 +80,6 @@ interface ClusterMarker {
   count: number;
   lon: number;
   lat: number;
-}
-
-// --- Cadastre parcel lookup (IGN Géoplateforme WFS, GeoJSON lon/lat) ---
-function pointInRing(lon: number, lat: number, ring: number[][]): boolean {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i], [xj, yj] = ring[j];
-    if (((yi > lat) !== (yj > lat)) && (lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)) inside = !inside;
-  }
-  return inside;
-}
-function pointInPolygon(lon: number, lat: number, rings: number[][][]): boolean {
-  if (!rings.length || !pointInRing(lon, lat, rings[0])) return false;
-  for (let k = 1; k < rings.length; k++) if (pointInRing(lon, lat, rings[k])) return false; // holes
-  return true;
-}
-function pointInGeometry(lon: number, lat: number, geom: any): boolean {
-  if (!geom) return false;
-  if (geom.type === 'Polygon') return pointInPolygon(lon, lat, geom.coordinates);
-  if (geom.type === 'MultiPolygon') return geom.coordinates.some((p: number[][][]) => pointInPolygon(lon, lat, p));
-  return false;
 }
 
 export function PropertyMap({
@@ -190,21 +170,11 @@ export function PropertyMap({
     map?.flyTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.getZoom(), 16.5), duration: 900 });
 
     let cancelled = false;
-    const { lon, lat } = focus;
-    const d = 0.0009; // ~90 m box around the point (bbox is lat,lon for WFS 2.0 / EPSG:4326)
-    const url =
-      'https://data.geopf.fr/wfs/ows?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature' +
-      '&typeNames=CADASTRALPARCELS.PARCELLAIRE_EXPRESS:parcelle&outputFormat=application/json' +
-      `&srsName=EPSG:4326&count=40&bbox=${lat - d},${lon - d},${lat + d},${lon + d}`;
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (cancelled || !json?.features?.length) return setParcel(null);
-        const hit = json.features.find((f: any) => pointInGeometry(lon, lat, f.geometry)) ?? null;
-        setParcel(hit);
-        if (hit) setParcels(true); // reveal the cadastre tiles for context
-      })
-      .catch(() => !cancelled && setParcel(null));
+    fetchParcelAt(focus.lon, focus.lat).then((hit) => {
+      if (cancelled) return;
+      setParcel(hit);
+      if (hit) setParcels(true); // reveal the cadastre tiles for context
+    });
     return () => { cancelled = true; };
   }, [focus]);
 
@@ -252,7 +222,7 @@ export function PropertyMap({
     setCursor('grab');
   };
 
-  // "Analyser cette adresse" → full address report (the estimation page, pre-seeded).
+  // "Analyser cette adresse" → full Markets-style address report.
   const analyze = (s: Sale) => {
     const p = new URLSearchParams();
     p.set('lat', String(s.latitude));
@@ -261,8 +231,14 @@ export function PropertyMap({
     const label = [s.adresse, s.nom_commune].filter(Boolean).join(', ');
     if (label) p.set('label', label);
     if (s.surface_bati) p.set('surface', String(Math.round(s.surface_bati)));
+    if (s.surface_terrain) p.set('terrain', String(Math.round(s.surface_terrain)));
     if (s.type) p.set('type', s.type);
-    router.push(`/estimation?${p.toString()}`);
+    if (s.prix) p.set('prix', String(Math.round(s.prix)));
+    if (s.date) p.set('date', s.date);
+    if (s.prix_m2 != null) p.set('prixm2', String(Math.round(s.prix_m2)));
+    if (s.dpe) p.set('dpe', s.dpe);
+    if (s.nb_pieces != null) p.set('pieces', String(s.nb_pieces));
+    router.push(`/adresse?${p.toString()}`);
   };
 
   const enterCard = () => {

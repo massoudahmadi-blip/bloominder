@@ -304,15 +304,154 @@ export async function exportCalculatorXlsx(opts: ExcelExportOpts): Promise<void>
   disc.alignment = { wrapText: true };
 
   ws.views = [{ state: 'frozen', ySplit: 4 }];
+  await download(wb, opts.fileName);
+}
 
+async function download(wb: ExcelJSNS.Workbook, fileName: string): Promise<void> {
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = opts.fileName;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Address-estimation dossier (snapshot, not a live model)
+// ---------------------------------------------------------------------------
+export interface EstimationExportOpts {
+  fileName: string; title: string; generatedLabel: string; disclaimer: string;
+  address: string;
+  surface: number;
+  estimate: { value: number | null; low: number | null; high: number | null; medianM2: number | null; reliability: string; n: number };
+  parcel?: { ref: string; land: number | null } | null;
+  city?: { name: string; scoreGlobal: number | null; medianM2: number | null; yieldPct: number | null; population: number | null; income: number | null } | null;
+  comps: { date: string; type: string; surface: number | null; prixM2: number | null; prix: number }[];
+  labels: {
+    sEstimate: string; sPosition: string; sCity: string; sComps: string;
+    estValue: string; estRange: string; estPerM2: string; reliability: string; basedOn: string;
+    surface: string; parcelRef: string; land: string;
+    scoreGlobal: string; priceM2: string; yieldLbl: string; population: string; income: string;
+    cDate: string; cType: string; cSurface: string; cPriceM2: string; cPrice: string;
+  };
+}
+
+export async function exportEstimationXlsx(opts: EstimationExportOpts): Promise<void> {
+  const ExcelJS: typeof ExcelJSNS = (await import('exceljs')).default;
+  const { estimate: E, city, parcel, labels: L } = opts;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Bloominder';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Bloominder', { views: [{ showGridLines: false }] });
+  ws.columns = [{ width: 3 }, { width: 26 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 14 }];
+
+  try {
+    const imgId = wb.addImage({ base64: watermarkPng(), extension: 'png' });
+    (ws as any).background = imgId;
+  } catch { /* canvas unavailable */ }
+  ws.headerFooter.oddFooter = '&LBloominder&Rbloominder.com';
+
+  ws.mergeCells('B1:F1');
+  const t1 = ws.getCell('B1');
+  t1.value = 'Bloominder';
+  t1.font = { name: 'Arial', size: 22, bold: true, color: { argb: 'FFFFFFFF' } };
+  t1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL } };
+  t1.alignment = { vertical: 'middle', indent: 1 };
+  ws.getRow(1).height = 34;
+  ['C1', 'D1', 'E1', 'F1'].forEach((c) => { ws.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL } }; });
+  ws.mergeCells('B2:F2');
+  ws.getCell('B2').value = opts.title;
+  ws.getCell('B2').font = { size: 12, bold: true, color: { argb: SLATE } };
+  ws.mergeCells('B3:F3');
+  ws.getCell('B3').value = `${opts.generatedLabel}   ·   ${opts.address}`;
+  ws.getCell('B3').font = { size: 9, italic: true, color: { argb: 'FF94A3B8' } };
+
+  let row = 5;
+  const section = (label: string) => {
+    ws.mergeCells(`B${row}:F${row}`);
+    const cell = ws.getCell(`B${row}`);
+    cell.value = label;
+    cell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TEAL } };
+    cell.alignment = { indent: 1 };
+    ws.getRow(row).height = 20;
+    row++;
+  };
+  const kv = (label: string, value: string | number, fmt?: string, strong = false) => {
+    const b = ws.getCell(`B${row}`); const c = ws.getCell(`C${row}`);
+    b.value = label; b.font = { size: 10, color: { argb: SLATE } };
+    c.value = value; if (fmt) c.numFmt = fmt;
+    c.font = { size: strong ? 13 : 10, bold: strong, color: { argb: strong ? TEAL_DK : 'FF0F172A' } };
+    c.alignment = { horizontal: 'right' };
+    if (row % 2 === 0) { b.fill = c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; }
+    row++;
+  };
+
+  section(L.sEstimate);
+  kv(L.surface, opts.surface, '#,##0 "m²"');
+  if (E.value != null) kv(L.estValue, E.value, EUR, true);
+  if (E.low != null && E.high != null) kv(L.estRange, `${E.low.toLocaleString('fr-FR')} – ${E.high.toLocaleString('fr-FR')} €`);
+  if (E.medianM2 != null) kv(L.estPerM2, E.medianM2, '#,##0 "€/m²"');
+  kv(L.reliability, E.reliability);
+  kv(L.basedOn, E.n);
+  row++;
+
+  if (parcel) {
+    section(L.sPosition);
+    kv(L.parcelRef, parcel.ref);
+    if (parcel.land != null) kv(L.land, parcel.land, '#,##0 "m²"');
+    row++;
+  }
+
+  if (city) {
+    section(`${L.sCity} — ${city.name}`);
+    if (city.scoreGlobal != null) kv(L.scoreGlobal, Math.round(city.scoreGlobal), '0');
+    if (city.medianM2 != null) kv(L.priceM2, city.medianM2, '#,##0 "€/m²"');
+    if (city.yieldPct != null) kv(L.yieldLbl, city.yieldPct / 100, '0.0%');
+    if (city.population != null) kv(L.population, city.population, '#,##0');
+    if (city.income != null) kv(L.income, city.income, EUR);
+    row++;
+  }
+
+  if (opts.comps.length) {
+    section(L.sComps);
+    const heads = [L.cDate, L.cType, L.cSurface, L.cPriceM2, L.cPrice];
+    const hr = ws.getRow(row);
+    heads.forEach((h, i) => {
+      const cell = hr.getCell(i + 2);
+      cell.value = h;
+      cell.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SLATE } };
+      cell.alignment = { horizontal: i === 0 || i === 1 ? 'left' : 'right' };
+    });
+    row++;
+    opts.comps.slice(0, 15).forEach((c, idx) => {
+      const r = ws.getRow(row);
+      r.getCell(2).value = c.date;
+      r.getCell(3).value = c.type;
+      r.getCell(4).value = c.surface ?? '—'; r.getCell(4).numFmt = '#,##0 "m²"';
+      r.getCell(5).value = c.prixM2 ?? '—'; r.getCell(5).numFmt = '#,##0 "€"';
+      r.getCell(6).value = c.prix; r.getCell(6).numFmt = EUR;
+      for (let i = 2; i <= 6; i++) {
+        r.getCell(i).font = { size: 9, color: { argb: 'FF0F172A' } };
+        r.getCell(i).alignment = { horizontal: i <= 3 ? 'left' : 'right' };
+      }
+      if (idx % 2 === 1) for (let i = 2; i <= 6; i++) r.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
+      row++;
+    });
+    row++;
+  }
+
+  ws.mergeCells(`B${row}:F${row}`);
+  const disc = ws.getCell(`B${row}`);
+  disc.value = opts.disclaimer;
+  disc.font = { size: 8, italic: true, color: { argb: 'FF94A3B8' } };
+  disc.alignment = { wrapText: true };
+
+  ws.views = [{ state: 'frozen', ySplit: 4 }];
+  await download(wb, opts.fileName);
 }
