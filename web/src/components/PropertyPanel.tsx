@@ -84,6 +84,12 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
               <span className="text-slate-500">{t.soldOn}</span>
               <span className="font-medium text-slate-800">{formatDate(sale.date, locale)}</span>
             </div>
+            {sale.surface_terrain != null && (
+              <div className="mt-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                <span className="text-slate-500">{t.land}</span>
+                <span className="font-medium text-slate-800">{formatM2(sale.surface_terrain)}</span>
+              </div>
+            )}
           </section>
 
           {/* Estimate */}

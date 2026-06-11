@@ -86,6 +86,7 @@ export function PropertyMap({
   const mapRef = useRef<MapRef>(null);
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
   const [cursor, setCursor] = useState<string>('grab');
+  const [parcels, setParcels] = useState(false);
 
   const byId = useMemo(() => {
     const m = new Map<string, Sale>();
@@ -190,6 +191,19 @@ export function PropertyMap({
       >
         <NavigationControl position="top-right" showCompass={false} />
 
+        {/* Official cadastre parcels overlay (IGN Géoplateforme), toggleable */}
+        {parcels && (
+          <Source
+            id="cadastre"
+            type="raster"
+            tiles={['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}']}
+            tileSize={256}
+            attribution="© IGN — Parcellaire Express"
+          >
+            <Layer id="cadastre-lyr" type="raster" paint={{ 'raster-opacity': 0.7 }} beforeId="unclustered-point" />
+          </Source>
+        )}
+
         <Source id="sales" type="geojson" data={geojson} cluster clusterRadius={48} clusterMaxZoom={14}>
           <Layer {...unclusteredLayer} />
           <Layer {...selectedLayer} filter={['==', ['get', 'sid'], selected ? String(selected.id) : '']} />
@@ -254,6 +268,15 @@ export function PropertyMap({
 
         <Legend />
       </MapGL>
+      <button
+        onClick={() => setParcels((p) => !p)}
+        className={`absolute left-3 top-16 z-10 flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium shadow-panel transition ${parcels ? 'bg-brand-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+        </svg>
+        {t.parcels}
+      </button>
     </div>
   );
 }
