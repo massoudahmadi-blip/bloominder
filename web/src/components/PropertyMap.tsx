@@ -2,6 +2,7 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import MapGL, {
   Source,
   Layer,
@@ -115,6 +116,7 @@ export function PropertyMap({
   onViewChange: (bbox: BBox) => void;
 }) {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const mapRef = useRef<MapRef>(null);
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
   const [cursor, setCursor] = useState<string>('grab');
@@ -250,6 +252,19 @@ export function PropertyMap({
     setCursor('grab');
   };
 
+  // "Analyser cette adresse" → full address report (the estimation page, pre-seeded).
+  const analyze = (s: Sale) => {
+    const p = new URLSearchParams();
+    p.set('lat', String(s.latitude));
+    p.set('lon', String(s.longitude));
+    if (s.code_commune) p.set('citycode', s.code_commune);
+    const label = [s.adresse, s.nom_commune].filter(Boolean).join(', ');
+    if (label) p.set('label', label);
+    if (s.surface_bati) p.set('surface', String(Math.round(s.surface_bati)));
+    if (s.type) p.set('type', s.type);
+    router.push(`/estimation?${p.toString()}`);
+  };
+
   const enterCard = () => {
     overCard.current = true;
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
@@ -376,10 +391,7 @@ export function PropertyMap({
               )}
 
               <button
-                onClick={() => {
-                  onSelect(hovered);
-                  setHovered(null);
-                }}
+                onClick={() => { analyze(hovered); setHovered(null); }}
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

@@ -17,6 +17,21 @@ export default function EstimationPage() {
   const [comps, setComps] = useState<Sale[]>([]);
   const [city, setCity] = useState<CommuneProfile | null>(null);
 
+  // Deep-link from the map ("Analyser cette adresse") pre-seeds the report.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const lat = Number(p.get('lat'));
+    const lon = Number(p.get('lon'));
+    if (!lat || !lon) return;
+    setAddr({
+      label: p.get('label') || `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
+      lat, lon,
+      citycode: p.get('citycode') || undefined,
+    });
+    const s = Number(p.get('surface'));
+    if (s > 0) setSurface(Math.round(s));
+  }, []);
+
   useEffect(() => {
     if (!addr) return;
     setComps([]); setCity(null);
