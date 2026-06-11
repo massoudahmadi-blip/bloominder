@@ -204,6 +204,13 @@ export default function CalculatorPage() {
 
               <div className="my-2 border-t border-slate-100" />
               <Row label={t.rNetCashflowM} value={formatEUR(Math.round(proj.netCfM), locale)} />
+              <div className="mt-1 flex items-center justify-between rounded-xl px-3 py-2"
+                style={{ background: proj.netCfM >= 0 ? '#ecfdf5' : '#fff7ed' }}>
+                <span className="text-slate-600">{t.rOutOfPocket}</span>
+                <span className="text-base font-bold" style={{ color: proj.netCfM >= 0 ? '#059669' : '#ea580c' }}>
+                  {proj.netCfM >= 0 ? `0 € · ${t.selfFunded}` : `${formatEUR(Math.round(-proj.netCfM), locale)} /mo`}
+                </span>
+              </div>
               <Row label={t.rExitValue} value={formatEUR(Math.round(proj.exitValue), locale)} />
               <Row label={t.rTotalProfit} value={formatEUR(Math.round(proj.totalProfit), locale)} strong />
               <Row label={`${t.rIRR} · ${holdYears}a`} value={proj.irrPct != null ? `${proj.irrPct.toFixed(1)}%` : '—'} strong />
