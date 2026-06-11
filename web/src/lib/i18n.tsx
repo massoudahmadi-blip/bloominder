@@ -181,6 +181,7 @@ const dict = {
     collegesLbl: 'Collèges',
     lyceesLbl: 'Lycées',
     eduPriority: 'Éducation prioritaire (REP)',
+    crimeLbl: 'Délinquance /1000',
   },
   en: {
     tagline: 'French property sold prices',
@@ -358,6 +359,7 @@ const dict = {
     collegesLbl: 'Middle schools',
     lyceesLbl: 'High schools',
     eduPriority: 'Priority education (REP)',
+    crimeLbl: 'Crime /1000',
   },
 } as const;
 

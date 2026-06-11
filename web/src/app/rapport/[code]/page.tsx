@@ -225,10 +225,11 @@ export default function ReportPage() {
           {/* Cadre de vie */}
           {data.livability && (data.livability.schools ?? 0) > 0 && (
             <Card title={t.livabilityTitle}>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 <Kpi label={t.schoolsLbl} value={data.livability.ecoles != null ? String(data.livability.ecoles) : '—'} />
                 <Kpi label={t.collegesLbl} value={data.livability.colleges != null ? String(data.livability.colleges) : '—'} />
                 <Kpi label={t.lyceesLbl} value={data.livability.lycees != null ? String(data.livability.lycees) : '—'} />
+                <Kpi label={t.crimeLbl} value={data.livability.crime_rate != null ? String(data.livability.crime_rate) : '—'} />
                 <Kpi label={t.eduPriority} value={data.livability.education_prioritaire ? '✓' : '—'} />
               </div>
             </Card>
