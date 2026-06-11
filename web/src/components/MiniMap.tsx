@@ -19,8 +19,11 @@ const STYLE: any = {
   layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
 };
 
-// Small map centred on an address, with the IGN cadastre parcels overlaid.
-export function MiniMap({ lon, lat, height = 280 }: { lon: number; lat: number; height?: number }) {
+// Small map centred on an address, with the IGN cadastre parcels overlaid and
+// (optionally) the exact parcel outlined.
+export function MiniMap({ lon, lat, height = 280, parcel }: {
+  lon: number; lat: number; height?: number; parcel?: GeoJSON.Feature | null;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200" style={{ height }}>
       <Map
@@ -38,6 +41,12 @@ export function MiniMap({ lon, lat, height = 280 }: { lon: number; lat: number; 
         >
           <Layer id="cadl" type="raster" paint={{ 'raster-opacity': 0.75 }} />
         </Source>
+        {parcel && (
+          <Source id="parcel" type="geojson" data={parcel}>
+            <Layer id="parcel-fill" type="fill" paint={{ 'fill-color': '#0d9488', 'fill-opacity': 0.22 }} />
+            <Layer id="parcel-line" type="line" paint={{ 'line-color': '#0d9488', 'line-width': 2.5 }} />
+          </Source>
+        )}
         <Marker longitude={lon} latitude={lat} anchor="bottom">
           <svg className="h-8 w-8 text-brand-600 drop-shadow" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />

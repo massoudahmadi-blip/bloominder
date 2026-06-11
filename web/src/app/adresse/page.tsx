@@ -47,7 +47,8 @@ export default function AdressePage() {
 
   useEffect(() => {
     if (!seed) return;
-    getComparables(seed.lat, seed.lon).then(setComps).catch(() => {});
+    // Like-for-like comparables (same property type) make the estimate sharper.
+    getComparables(seed.lat, seed.lon, seed.type ?? null).then(setComps).catch(() => {});
     if (seed.citycode) getCommune(seed.citycode).then(setCity).catch(() => {});
     fetchParcelAt(seed.lon, seed.lat).then(setParcel).catch(() => {});
   }, [seed]);
@@ -174,7 +175,7 @@ export default function AdressePage() {
             {/* Position */}
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.position}</h2>
-              <MiniMap lon={seed.lon} lat={seed.lat} />
+              <MiniMap lon={seed.lon} lat={seed.lat} parcel={parcel} />
             </section>
 
             {/* Market context (Markets-style) */}

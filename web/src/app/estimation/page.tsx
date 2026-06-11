@@ -139,7 +139,7 @@ export default function EstimationPage() {
                   {parcel.properties.contenance != null && <> · {t.land} {formatM2(Number(parcel.properties.contenance))}</>}
                 </p>
               )}
-              <div className="mt-3"><MiniMap lon={addr.lon} lat={addr.lat} /></div>
+              <div className="mt-3"><MiniMap lon={addr.lon} lat={addr.lat} parcel={parcel} /></div>
             </section>
 
             {/* City context */}
