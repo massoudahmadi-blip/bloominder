@@ -47,6 +47,25 @@ export interface YearTrend {
   median_eur_m2: number | null;
 }
 
+export interface TopCommune {
+  code_commune: string;
+  nom_commune: string;
+  code_departement: string;
+  ventes_total?: number;
+  volume_total?: number;
+  resales?: number;
+  median_gain_pct?: number | null;
+}
+
+export interface StatsData {
+  totals: { ventes: number; volume: number; communes: number; min_date: string; max_date: string } | null;
+  byType: { type: string; ventes: number; median_m2: number | null }[];
+  byDept: { dept: string; ventes: number; volume: number; median_m2: number | null }[];
+  topSales: TopCommune[];
+  topVolume: TopCommune[];
+  topTurnover: TopCommune[];
+}
+
 export interface NewsItem {
   title: string;
   link: string;

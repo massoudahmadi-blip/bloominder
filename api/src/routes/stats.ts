@@ -3,6 +3,32 @@ import { query } from '../db';
 
 // Market stats — powers trend charts and neighborhood summaries.
 export async function statsRoutes(app: FastifyInstance) {
+  // National DVF statistics + top-10s for the /stats page.
+  app.get('/stats', async () => {
+    const rows = await query<{ key: string; data: unknown }>(`SELECT key, data FROM stats`);
+    const map: Record<string, any> = {};
+    for (const r of rows) map[r.key] = r.data;
+    const topSales = await query(
+      `SELECT code_commune, nom_commune, code_departement, ventes_total
+       FROM commune_metrics ORDER BY ventes_total DESC NULLS LAST LIMIT 10`,
+    );
+    const topVolume = await query(
+      `SELECT code_commune, nom_commune, code_departement, volume_total
+       FROM commune_metrics WHERE volume_total IS NOT NULL ORDER BY volume_total DESC LIMIT 10`,
+    );
+    const topTurnover = await query(
+      `SELECT cr.code_commune, m.nom_commune, m.code_departement, cr.resales, cr.median_gain_pct
+       FROM commune_resale cr JOIN commune_metrics m USING (code_commune)
+       WHERE m.ventes_total >= 50 ORDER BY cr.resales DESC LIMIT 10`,
+    );
+    return {
+      totals: map.totals ?? null,
+      byType: map.by_type ?? [],
+      byDept: Array.isArray(map.by_dept) ? map.by_dept.slice(0, 15) : [],
+      topSales, topVolume, topTurnover,
+    };
+  });
+
   // GET /api/stats/commune/:codeCommune
   // Median price/m2 by property type + total volume for a commune.
   app.get('/stats/commune/:codeCommune', async (req, reply) => {

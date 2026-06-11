@@ -77,14 +77,15 @@ agg AS (
         AND date_mutation <  (SELECT maxd FROM b) - INTERVAL '36 months'
         AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '48 months') AS med_3y,
     percentile_cont(0.25) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p25,
-    percentile_cont(0.75) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p75
+    percentile_cont(0.75) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p75,
+    sum(valeur_fonciere) AS volume_total
   FROM mut
   GROUP BY code_commune
 )
 INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_total,ventes_12m,
   median_prix_m2,median_prix_m2_appartement,median_prix_m2_maison,prix_m2_growth_3y,
   loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison,
-  p25_prix_m2,p75_prix_m2,code_postal)
+  p25_prix_m2,p75_prix_m2,code_postal,volume_total)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
   CASE WHEN a.med_3y > 0 AND ((a.med_now - a.med_3y) / a.med_3y * 100) BETWEEN -50 AND 200
@@ -96,7 +97,7 @@ SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.vent
   CASE WHEN a.med_mai > 0 AND rc.loyer_m2_maison IS NOT NULL
         AND (rc.loyer_m2_maison * 12 / a.med_mai * 100) <= 25
        THEN round((rc.loyer_m2_maison * 12 / a.med_mai * 100)::numeric, 2) END,
-  round(a.p25), round(a.p75), a.code_postal
+  round(a.p25), round(a.p75), a.code_postal, round(a.volume_total)
 FROM agg a
 LEFT JOIN rents_commune rc ON rc.code_commune = a.code_commune
 WHERE a.ventes_total >= 5;
@@ -123,6 +124,25 @@ INSERT INTO benchmark(scope,code,median_prix_m2)
 SELECT 'DEP', code_departement, round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2))
 FROM transactions WHERE prix_m2 BETWEEN 400 AND 25000 AND code_departement IS NOT NULL
 GROUP BY code_departement;
+
+-- National stats for the /stats page.
+DELETE FROM stats;
+INSERT INTO stats(key,data)
+SELECT 'totals', jsonb_build_object('ventes', m.v, 'volume', m.vol, 'communes', m.c, 'min_date', d.mn, 'max_date', d.mx)
+FROM (SELECT sum(ventes_total) v, sum(volume_total) vol, count(*) c FROM commune_metrics) m,
+     (SELECT min(date_mutation)::text mn, max(date_mutation)::text mx FROM transactions) d;
+INSERT INTO stats(key,data)
+SELECT 'by_dept', jsonb_agg(x) FROM (
+  SELECT code_departement AS dept, sum(ventes_total) AS ventes, round(sum(volume_total)) AS volume,
+         round(percentile_cont(0.5) WITHIN GROUP (ORDER BY median_prix_m2)) AS median_m2
+  FROM commune_metrics WHERE code_departement IS NOT NULL
+  GROUP BY code_departement ORDER BY ventes DESC) x;
+INSERT INTO stats(key,data)
+SELECT 'by_type', jsonb_agg(x) FROM (
+  SELECT COALESCE(NULLIF(type_local,''),'Terrain/Autre') AS type, count(*) AS ventes,
+         round(percentile_cont(0.5) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000)) AS median_m2
+  FROM transactions WHERE nature_mutation='Vente'
+  GROUP BY type_local ORDER BY ventes DESC LIMIT 8) x;
 SQL
 
 echo ">> Computing commune_scores (default weights: yield .45 / growth .35 / demand .20)..."

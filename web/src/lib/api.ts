@@ -1,4 +1,4 @@
-import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile, NewsItem } from './types';
+import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile, NewsItem, StatsData } from './types';
 import { mockSalesInView, mockComparables, mockTrend, mockScreener, mockCommune, mockCommuneTransactions } from './mock';
 
 const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
@@ -143,6 +143,39 @@ export async function getCommuneTransactions(
       latitude: r.latitude ?? 0,
     })),
   };
+}
+
+/** National DVF statistics + top-10s for the /stats page. */
+export async function getStats(): Promise<StatsData> {
+  if (USING_MOCK) {
+    return {
+      totals: { ventes: 30654017, volume: 4.2e12, communes: 34900, min_date: '2014-01-01', max_date: '2025-12-31' },
+      byType: [
+        { type: 'Maison', ventes: 9800000, median_m2: 2100 },
+        { type: 'Appartement', ventes: 8200000, median_m2: 3600 },
+        { type: 'Terrain/Autre', ventes: 7100000, median_m2: null },
+        { type: 'Local', ventes: 900000, median_m2: 2500 },
+      ],
+      byDept: [
+        { dept: '13', ventes: 620000, volume: 9.1e10, median_m2: 2900 },
+        { dept: '75', ventes: 410000, volume: 1.8e11, median_m2: 10500 },
+        { dept: '33', ventes: 380000, volume: 5.2e10, median_m2: 3400 },
+      ],
+      topSales: [
+        { code_commune: '13055', nom_commune: 'Marseille', code_departement: '13', ventes_total: 120000 },
+        { code_commune: '06088', nom_commune: 'Nice', code_departement: '06', ventes_total: 88000 },
+      ],
+      topVolume: [
+        { code_commune: '75056', nom_commune: 'Paris', code_departement: '75', volume_total: 1.6e11 },
+      ],
+      topTurnover: [
+        { code_commune: '06088', nom_commune: 'Nice', code_departement: '06', resales: 9200, median_gain_pct: 18 },
+      ],
+    };
+  }
+  const res = await fetch(`${API}/api/stats`);
+  if (!res.ok) throw new Error(`stats ${res.status}`);
+  return res.json();
 }
 
 /** Latest transaction date (to default the map to the last 6 months of data). */
