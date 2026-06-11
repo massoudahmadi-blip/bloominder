@@ -182,6 +182,15 @@ Recommended sequencing: **Report v2 from existing data first** (comps, liquidity
 - **Map search:** **date range** (API /api/map already supports from/to — add UI) · **surface habitable** min/max · **land size** (surface_terrain) min/max · **DPE class** (join transaction_dpe) — all need /api/map params + filter UI.
 - **Data quality:** many DVF rows lack surface/rooms (land, dependencies, partial records) — surface/DPE filters naturally exclude them; flag in UI. **Multi-lot mutations** (rows that are one sale) → grouping fix via cadastre/id_mutation dedup (already queued §11/cadastre).
 
+## 12. UX + address-report + stats batch (user, 2026-06-11)
+- **Map**: on address search, drop the point ON the cadastre and **highlight the parcel/land** (IGN WFS GetFeature by point → polygon); auto-enable parcels overlay + zoom.
+- **Default map window** = last **complete 6 months** of transactions.
+- **Floating filters panel** (HAR-style: search bar + Price/Beds/Baths/Type/Filters chips → slide-over panel).
+- **Redesign**: more modern/premium; 2 candidate themes (Éditorial-Light vs Dark-Fintech).
+- **DVF statistics page**: distributions by city/region/property type; **top-10s** (most sales, biggest € volume, highest repeat-sale turnover, etc.).
+- **Deeper multi-lot gather**: group rows of the same sale (use id_mutation where real; commune+date+valeur fallback already in compute) — extend to display (collapse drill-down rows into one sale).
+- **Address-level report / estimate** (AVM): address search → full report = position in France → cadastre/parcel → exact address + all DVF details → city commodities (schools, crime, population, age, transactions last yr, 2/5-yr change, income, €/m², overall score) → estimate w/ confidence + comps. Doubles as a valuation doc to convince a buyer.
+
 ## 11. Open items to confirm
 - Pricing tiers/amounts, trial length, annual discount (defaults in §6).
 - Competitor tools the owner wants benchmarked (send links).
