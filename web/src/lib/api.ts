@@ -143,10 +143,11 @@ export async function getCommuneTransactions(
       nom_commune: r.nom_commune,
       code_postal: r.code_postal,
       surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
-      nb_pieces: r.nb_pieces ?? null,
+      surface_terrain: r.surface_terrain != null ? Number(r.surface_terrain) : null,
+      nb_pieces: r.nb_pieces != null ? Number(r.nb_pieces) : null,
       dpe: r.dpe ?? null,
-      longitude: r.longitude ?? 0,
-      latitude: r.latitude ?? 0,
+      longitude: r.longitude != null ? Number(r.longitude) : 0,
+      latitude: r.latitude != null ? Number(r.latitude) : 0,
     })),
   };
 }
