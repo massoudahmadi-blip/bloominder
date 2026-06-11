@@ -114,6 +114,38 @@ export default function CommunePage() {
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </section>
 
+            {/* France-vs-area benchmark */}
+            {m.median_prix_m2 != null && (data.benchmark.dept != null || data.benchmark.fr != null) && (
+              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.benchmarkTitle}</h2>
+                {(() => {
+                  const you = m.median_prix_m2 as number;
+                  const dep = data.benchmark.dept;
+                  const fr = data.benchmark.fr;
+                  const max = Math.max(you, dep ?? 0, fr ?? 0) || 1;
+                  const dDep = dep ? ((you - dep) / dep) * 100 : null;
+                  const dFr = fr ? ((you - fr) / fr) * 100 : null;
+                  const sign = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`;
+                  const col = (v: number) => (v > 0 ? 'text-rose-600' : 'text-emerald-600');
+                  return (
+                    <>
+                      <div className="space-y-3">
+                        <BenchRow label={m.nom_commune} value={you} max={max} locale={locale} accent />
+                        <BenchRow label={t.benchDeptLbl} value={dep} max={max} locale={locale} />
+                        <BenchRow label="France" value={fr} max={max} locale={locale} />
+                      </div>
+                      <p className="mt-4 text-sm text-slate-500">
+                        {m.nom_commune}{' '}
+                        {dDep != null && <span className={col(dDep)}>{sign(dDep)} {t.benchVsDept}</span>}
+                        {dDep != null && dFr != null && ' · '}
+                        {dFr != null && <span className={col(dFr)}>{sign(dFr)} {t.benchVsFr}</span>}
+                      </p>
+                    </>
+                  );
+                })()}
+              </section>
+            )}
+
             {/* Energy */}
             <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.energyTitle}</h2>
@@ -265,6 +297,23 @@ export default function CommunePage() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function BenchRow({ label, value, max, locale, accent }: {
+  label: string; value: number | null; max: number; locale: string; accent?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-sm">
+        <span className={accent ? 'font-semibold text-slate-800' : 'text-slate-600'}>{label}</span>
+        <span className="tabular-nums text-slate-500">{value != null ? formatEUR(value, locale) : '—'}</span>
+      </div>
+      <div className="mt-1 h-3 rounded-full bg-slate-100">
+        <div className="h-3 rounded-full transition-all"
+          style={{ width: `${value != null ? (value / max) * 100 : 0}%`, background: accent ? '#0d9488' : '#cbd5e1' }} />
+      </div>
     </div>
   );
 }
