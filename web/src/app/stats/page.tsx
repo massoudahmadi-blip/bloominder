@@ -30,6 +30,20 @@ export default function StatsPage() {
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t.statsTitle}</h1>
 
+        {!d ? (
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-white" />)}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-56 animate-pulse rounded-2xl bg-white" />)}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-56 animate-pulse rounded-2xl bg-white" />)}
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Totals */}
         {d?.totals && (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -132,6 +146,8 @@ export default function StatsPage() {
           <TopList title={t.topVolumeTitle} rows={d?.topVolume ?? []} render={(r) => big(r.volume_total ?? 0)} locale={locale} />
           <TopList title={t.topTurnoverTitle} rows={d?.topTurnover ?? []} render={(r) => nf.format(r.resales ?? 0)} locale={locale} />
         </div>
+        </>
+        )}
       </main>
     </div>
   );
