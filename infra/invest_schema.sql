@@ -119,8 +119,11 @@ CREATE TABLE IF NOT EXISTS commune_livability (
   colleges              int,
   lycees                int,
   education_prioritaire boolean,
-  crime_rate            numeric,   -- per 1000 (added later, SSMSI)
-  doctors               numeric,   -- (added later, DREES/BPE)
+  crime_rate            numeric,   -- per 1000 (SSMSI)
+  doctors               numeric,   -- reserved
+  health_equip          int,       -- BPE health facilities (domain D)
+  transport_equip       int,       -- BPE transport facilities (domain E)
+  total_equip           int,       -- BPE total facilities
   updated_at            timestamptz DEFAULT now()
 );
 

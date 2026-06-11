@@ -184,6 +184,8 @@ const dict = {
     lyceesLbl: 'Lycées',
     eduPriority: 'Éducation prioritaire (REP)',
     crimeLbl: 'Délinquance /1000',
+    healthLbl: 'Santé (équip.)',
+    transportLbl: 'Transport (équip.)',
     newsTitle: 'Actualités locales',
   },
   en: {
@@ -365,6 +367,8 @@ const dict = {
     lyceesLbl: 'High schools',
     eduPriority: 'Priority education (REP)',
     crimeLbl: 'Crime /1000',
+    healthLbl: 'Health (facilities)',
+    transportLbl: 'Transport (facilities)',
     newsTitle: 'Local news',
   },
 } as const;
