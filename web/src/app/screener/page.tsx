@@ -136,7 +136,7 @@ export default function ScreenerPage() {
                 <Th col="score_global" label={t.colScore} />
                 <th className="px-3 py-2 text-left font-medium">{t.colCommune}</th>
                 <Th col="median_prix_m2" label={t.colPriceM2} right />
-                <Th col="prix_m2_growth_3y" label={t.colGrowth} right />
+                <Th col="prix_m2_growth_1y" label={t.colGrowth} right />
                 <th className="px-3 py-2 text-right font-medium">{t.colRent}</th>
                 <Th col="rendement_brut_appartement" label={t.colYield} right />
                 <th className="px-3 py-2 text-right font-medium">{t.colResale}</th>
@@ -163,8 +163,8 @@ export default function ScreenerPage() {
                       <div className="font-medium text-slate-800">{r.nom_commune}</div>
                       <div className="text-xs text-slate-400">{r.code_departement}</div>
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{r.median_prix_m2 ? formatEUR(r.median_prix_m2, locale) : '—'}</td>
-                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.prix_m2_growth_3y != null && r.prix_m2_growth_3y < 0 ? '#ef4444' : '#10b981' }}>{pct(r.prix_m2_growth_3y, true)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{(r.median_prix_m2_12m ?? r.median_prix_m2) ? formatEUR((r.median_prix_m2_12m ?? r.median_prix_m2) as number, locale) : '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums" style={{ color: r.prix_m2_growth_1y != null && r.prix_m2_growth_1y < 0 ? '#ef4444' : '#10b981' }}>{pct(r.prix_m2_growth_1y, true)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{r.loyer_m2_appartement != null ? `${r.loyer_m2_appartement} €` : '—'}</td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-800">{pct(r.rendement_brut_appartement)}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{pct(r.resale_gain, true)}</td>

@@ -105,11 +105,12 @@ export default function CommunePage() {
             <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <Kpi label={t.kpiPopulation} value={data.demo?.population != null ? data.demo.population.toLocaleString('fr-FR') : '—'} />
               <Kpi label={t.kpiIncome} value={data.demo?.median_income != null ? formatEUR(data.demo.median_income, locale) : '—'} />
+              <Kpi label={t.kpiPrice12m} value={(m.median_prix_m2_12m ?? m.median_prix_m2) ? formatEUR((m.median_prix_m2_12m ?? m.median_prix_m2) as number, locale) : '—'} accent />
               <Kpi label={t.kpiPriceAppt} value={m.median_prix_m2_appartement ? formatEUR(m.median_prix_m2_appartement, locale) : '—'} />
               <Kpi label={t.kpiPriceMaison} value={m.median_prix_m2_maison ? formatEUR(m.median_prix_m2_maison, locale) : '—'} />
               <Kpi label={t.kpiRent} value={m.loyer_m2_appartement != null ? `${m.loyer_m2_appartement} €` : '—'} />
               <Kpi label={t.kpiYield} value={m.rendement_brut_appartement != null ? `${m.rendement_brut_appartement}%` : '—'} accent />
-              <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_3y != null ? `${m.prix_m2_growth_3y > 0 ? '+' : ''}${m.prix_m2_growth_3y}%` : '—'} />
+              <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_1y != null ? `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%` : '—'} />
               <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </section>

@@ -163,7 +163,7 @@ export default function AdressePage() {
                   <Kpi label={t.kpiIncome} value={city?.demo?.median_income != null ? formatEUR(city.demo.median_income, locale) : '—'} />
                   <Kpi label={t.kpiPriceAppt} value={m.median_prix_m2_appartement ? formatEUR(m.median_prix_m2_appartement, locale) : '—'} />
                   <Kpi label={t.kpiYield} value={m.rendement_brut_appartement != null ? `${m.rendement_brut_appartement}%` : '—'} accent />
-                  <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_3y != null ? `${m.prix_m2_growth_3y > 0 ? '+' : ''}${m.prix_m2_growth_3y}%` : '—'} />
+                  <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_1y != null ? `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%` : '—'} />
                   <Kpi label={t.kpiTax} value={city?.tax?.taux_tfb != null ? `${city.tax.taux_tfb}%` : '—'} />
                 </section>
 

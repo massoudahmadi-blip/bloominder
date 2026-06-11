@@ -42,6 +42,7 @@ export async function propertyRoutes(app: FastifyInstance) {
     lon: z.coerce.number(),
     radius: z.coerce.number().min(50).max(5000).default(500), // metres
     type: z.string().optional(),
+    months: z.coerce.number().int().min(6).max(240).default(24), // recency window
     limit: z.coerce.number().int().min(1).max(200).default(50),
   });
 
@@ -54,6 +55,10 @@ export async function propertyRoutes(app: FastifyInstance) {
     const params: unknown[] = [q.lon, q.lat, q.radius];
     let typeClause = '';
     if (q.type) { params.push(q.type); typeClause = `AND type_local = $${params.length}`; }
+    // Recent comparables only — relative to the latest data we hold, so it
+    // works even if the dataset lags "today" by a few months.
+    params.push(q.months);
+    const sinceClause = `AND date_mutation >= ((SELECT max(date_mutation) FROM transactions) - ($${params.length} || ' months')::interval)`;
     params.push(q.limit);
 
     const rows = await query(
@@ -69,10 +74,11 @@ export async function propertyRoutes(app: FastifyInstance) {
                ST_SetSRID(ST_MakePoint($1,$2),4326)::geography,
                $3)
          ${typeClause}
+         ${sinceClause}
        ORDER BY metres ASC, date_mutation DESC
        LIMIT $${params.length}`,
       params,
     );
-    return { center: { lat: q.lat, lon: q.lon }, radius: q.radius, comparables: rows };
+    return { center: { lat: q.lat, lon: q.lon }, radius: q.radius, months: q.months, comparables: rows };
   });
 }

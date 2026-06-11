@@ -74,6 +74,10 @@ agg AS (
       WHERE prix_m2 BETWEEN 400 AND 25000 AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '12 months') AS med_now,
     percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (
       WHERE prix_m2 BETWEEN 400 AND 25000
+        AND date_mutation <  (SELECT maxd FROM b) - INTERVAL '12 months'
+        AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '24 months') AS med_prev12,
+    percentile_cont(0.5)  WITHIN GROUP (ORDER BY prix_m2) FILTER (
+      WHERE prix_m2 BETWEEN 400 AND 25000
         AND date_mutation <  (SELECT maxd FROM b) - INTERVAL '36 months'
         AND date_mutation >= (SELECT maxd FROM b) - INTERVAL '48 months') AS med_3y,
     percentile_cont(0.25) WITHIN GROUP (ORDER BY prix_m2) FILTER (WHERE prix_m2 BETWEEN 400 AND 25000) AS p25,
@@ -84,12 +88,16 @@ agg AS (
 )
 INSERT INTO commune_metrics(code_commune,nom_commune,code_departement,ventes_total,ventes_12m,
   median_prix_m2,median_prix_m2_appartement,median_prix_m2_maison,prix_m2_growth_3y,
+  median_prix_m2_12m,prix_m2_growth_1y,
   loyer_m2_appartement,loyer_m2_maison,rendement_brut_appartement,rendement_brut_maison,
   p25_prix_m2,p75_prix_m2,code_postal,volume_total)
 SELECT a.code_commune, a.nom_commune, a.code_departement, a.ventes_total, a.ventes_12m,
   round(a.med_all), round(a.med_app), round(a.med_mai),
   CASE WHEN a.med_3y > 0 AND ((a.med_now - a.med_3y) / a.med_3y * 100) BETWEEN -50 AND 200
        THEN round(((a.med_now - a.med_3y) / a.med_3y * 100)::numeric, 1) END,
+  round(a.med_now),
+  CASE WHEN a.med_prev12 > 0 AND ((a.med_now - a.med_prev12) / a.med_prev12 * 100) BETWEEN -50 AND 100
+       THEN round(((a.med_now - a.med_prev12) / a.med_prev12 * 100)::numeric, 1) END,
   rc.loyer_m2_appartement, rc.loyer_m2_maison,
   CASE WHEN a.med_app > 0 AND a.n_app >= 10 AND rc.loyer_m2_appartement IS NOT NULL
         AND (rc.loyer_m2_appartement * 12 / a.med_app * 100) <= 25

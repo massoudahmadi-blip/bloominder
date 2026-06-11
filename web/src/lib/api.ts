@@ -48,9 +48,9 @@ export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale
   }));
 }
 
-export async function getComparables(lat: number, lon: number, type?: string | null): Promise<Sale[]> {
+export async function getComparables(lat: number, lon: number, type?: string | null, months = 24): Promise<Sale[]> {
   if (USING_MOCK) return mockComparables(lat, lon, type);
-  const url = `${API}/api/comparables?lat=${lat}&lon=${lon}&radius=800${type ? `&type=${type}` : ''}`;
+  const url = `${API}/api/comparables?lat=${lat}&lon=${lon}&radius=800&months=${months}${type ? `&type=${encodeURIComponent(type)}` : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`comparables ${res.status}`);
   const data = await res.json();

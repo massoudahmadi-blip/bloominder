@@ -101,6 +101,8 @@ export interface CommuneRow {
   median_prix_m2: number | null;
   median_prix_m2_appartement: number | null;
   median_prix_m2_maison: number | null;
+  median_prix_m2_12m: number | null;
+  prix_m2_growth_1y: number | null;
   prix_m2_growth_3y: number | null;
   loyer_m2_appartement: number | null;
   rendement_brut_appartement: number | null;
@@ -118,6 +120,7 @@ export interface CommuneRow {
 export type ScreenerSort =
   | 'score_global'
   | 'rendement_brut_appartement'
+  | 'prix_m2_growth_1y'
   | 'prix_m2_growth_3y'
   | 'median_prix_m2'
   | 'ventes_total';
@@ -144,6 +147,8 @@ export interface CommuneProfile {
     median_prix_m2: number | null;
     median_prix_m2_appartement: number | null;
     median_prix_m2_maison: number | null;
+    median_prix_m2_12m: number | null;
+    prix_m2_growth_1y: number | null;
     prix_m2_growth_3y: number | null;
     loyer_m2_appartement: number | null;
     loyer_m2_maison: number | null;

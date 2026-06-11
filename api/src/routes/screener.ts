@@ -4,7 +4,7 @@ import { query } from '../db';
 
 // City screener + city profile — the core investor views over the commune tables.
 const SORTS = [
-  'score_global', 'rendement_brut_appartement', 'prix_m2_growth_3y',
+  'score_global', 'rendement_brut_appartement', 'prix_m2_growth_1y', 'prix_m2_growth_3y',
   'median_prix_m2', 'ventes_total',
 ] as const;
 
@@ -56,6 +56,7 @@ export async function screenerRoutes(app: FastifyInstance) {
     const results = await query(
       `SELECT m.code_commune, m.nom_commune, m.code_departement, m.code_postal, m.ventes_total,
               m.median_prix_m2, m.median_prix_m2_appartement, m.median_prix_m2_maison,
+              m.median_prix_m2_12m, m.prix_m2_growth_1y,
               m.prix_m2_growth_3y, m.loyer_m2_appartement,
               m.rendement_brut_appartement, m.rendement_brut_maison,
               s.score_global, s.score_yield, s.score_growth, s.score_demand,

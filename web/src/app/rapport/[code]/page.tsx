@@ -110,7 +110,7 @@ export default function ReportPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Kpi label={t.kpiPriceAppt} value={m.median_prix_m2_appartement ? formatEUR(m.median_prix_m2_appartement, locale) : '—'} />
               <Kpi label={t.kpiPriceMaison} value={m.median_prix_m2_maison ? formatEUR(m.median_prix_m2_maison, locale) : '—'} />
-              <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_3y != null ? `${m.prix_m2_growth_3y > 0 ? '+' : ''}${m.prix_m2_growth_3y}%` : '—'} />
+              <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_1y != null ? `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%` : '—'} />
               <Kpi label={t.kpiLiquidity} value={m.median_days_to_sell != null ? `${m.median_days_to_sell} ${t.daysShort}` : '—'} />
               <Kpi label={t.kpiVolatility} value={m.p25_prix_m2 != null && m.p75_prix_m2 != null ? `${formatEUR(m.p25_prix_m2, locale)}–${formatEUR(m.p75_prix_m2, locale)}` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />

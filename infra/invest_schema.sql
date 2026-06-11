@@ -48,6 +48,8 @@ ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS p75_prix_m2 numeric;
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS median_days_to_sell int;  -- DPE→deed liquidity
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS code_postal text;          -- representative postal code
 ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS volume_total numeric;       -- total € transacted (mutation-level)
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS median_prix_m2_12m numeric;  -- median €/m² over the last 12 months
+ALTER TABLE commune_metrics ADD COLUMN IF NOT EXISTS prix_m2_growth_1y numeric;   -- YoY % change in median €/m²
 
 -- Precomputed national stats (distributions, totals) for the /stats page.
 CREATE TABLE IF NOT EXISTS stats (
