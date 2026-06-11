@@ -1,4 +1,4 @@
-import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile } from './types';
+import type { Sale, BBox, Filters, YearTrend, CommuneRow, ScreenerParams, CommuneProfile, NewsItem } from './types';
 import { mockSalesInView, mockComparables, mockTrend, mockScreener, mockCommune, mockCommuneTransactions } from './mock';
 
 const API = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ?? '';
@@ -143,6 +143,25 @@ export async function getCommuneTransactions(
       latitude: r.latitude ?? 0,
     })),
   };
+}
+
+/** Local news for a commune (headlines + links, lightly tagged). */
+export async function getNews(code: string): Promise<NewsItem[]> {
+  if (USING_MOCK) {
+    return [
+      { title: 'Une nouvelle ligne de tramway à l’étude', link: '#', date: '', source: 'Presse locale', tag: 'pos' },
+      { title: 'Ouverture d’un pôle d’entreprises au printemps', link: '#', date: '', source: 'Presse locale', tag: 'pos' },
+      { title: 'Travaux de rénovation du centre-ville', link: '#', date: '', source: 'Presse locale', tag: 'neutral' },
+    ];
+  }
+  try {
+    const res = await fetch(`${API}/api/news/${encodeURIComponent(code)}`);
+    if (!res.ok) return [];
+    const d = await res.json();
+    return d.items ?? [];
+  } catch {
+    return [];
+  }
 }
 
 // --- French government address autocomplete (BAN) — free, no key, works in the browser. ---

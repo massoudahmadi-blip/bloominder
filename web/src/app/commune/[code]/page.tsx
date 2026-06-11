@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getCommune, getCommuneTransactions } from '@/lib/api';
-import { CommuneProfile, Sale } from '@/lib/types';
+import { getCommune, getCommuneTransactions, getNews } from '@/lib/api';
+import { CommuneProfile, Sale, NewsItem } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
@@ -24,6 +24,7 @@ export default function CommunePage() {
   const [tx, setTx] = useState<Sale[]>([]);
   const [txTotal, setTxTotal] = useState(0);
   const [txPage, setTxPage] = useState(1);
+  const [news, setNews] = useState<NewsItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +43,12 @@ export default function CommunePage() {
       .catch(() => !cancelled && setTx([]));
     return () => { cancelled = true; };
   }, [code, txPage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getNews(code).then((n) => !cancelled && setNews(n)).catch(() => {});
+    return () => { cancelled = true; };
+  }, [code]);
 
   const m = data?.metrics;
   const s = data?.scores;
@@ -178,6 +185,25 @@ export default function CommunePage() {
                   <Kpi label={t.crimeLbl} value={data.livability.crime_rate != null ? String(data.livability.crime_rate) : '—'} />
                   <Kpi label={t.eduPriority} value={data.livability.education_prioritaire ? '✓' : '—'} />
                 </div>
+              </section>
+            )}
+
+            {/* Local news */}
+            {news.length > 0 && (
+              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.newsTitle}</h2>
+                <ul className="space-y-2">
+                  {news.map((n, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: n.tag === 'pos' ? '#10b981' : n.tag === 'neg' ? '#ef4444' : '#cbd5e1' }} />
+                      <a href={n.link} target="_blank" rel="noreferrer" className="text-slate-700 hover:text-brand-700 hover:underline">
+                        {n.title}
+                        {n.source && <span className="ml-1 text-xs text-slate-400">· {n.source}</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </section>
             )}
 

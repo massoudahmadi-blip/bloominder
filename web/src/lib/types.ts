@@ -47,6 +47,14 @@ export interface YearTrend {
   median_eur_m2: number | null;
 }
 
+export interface NewsItem {
+  title: string;
+  link: string;
+  date: string;
+  source: string;
+  tag: 'pos' | 'neg' | 'neutral';
+}
+
 export interface CommuneRow {
   code_commune: string;
   nom_commune: string;
