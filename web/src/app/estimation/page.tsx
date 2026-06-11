@@ -12,9 +12,11 @@ import { SubNav } from '@/components/SubNav';
 import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
 import { exportEstimationXlsx } from '@/lib/excel';
 import { estimateValue } from '@/lib/avm';
+import { usePageTitle } from '@/lib/useTitle';
 
 export default function EstimationPage() {
   const { t, locale } = useI18n();
+  usePageTitle(t.navEstimate);
   const [addr, setAddr] = useState<AddressSuggestion | null>(null);
   const [surface, setSurface] = useState(70);
   const [comps, setComps] = useState<Sale[]>([]);

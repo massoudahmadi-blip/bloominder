@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { ScoreDial } from '@/components/ScoreDial';
 import { EnergyBadge } from '@/components/EnergyBadge';
 import { SubNav } from '@/components/SubNav';
+import { usePageTitle } from '@/lib/useTitle';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -53,6 +54,7 @@ export default function CommunePage() {
 
   const m = data?.metrics;
   const s = data?.scores;
+  usePageTitle(m?.nom_commune ?? t.markets);
   const vv = (data?.valeur_verte ?? [])
     .filter((x) => x.median_eur_m2 != null)
     .sort((a, b) => ENERGY_ORDER.indexOf(a.classe) - ENERGY_ORDER.indexOf(b.classe));

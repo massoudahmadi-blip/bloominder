@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatEUR } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
+import { usePageTitle } from '@/lib/useTitle';
 import { exportCalculatorXlsx } from '@/lib/excel';
 
 function irr(cfs: number[]): number | null {
@@ -93,6 +94,7 @@ const SENS_APPRECS = [0, 1, 2, 3];
 
 export default function CalculatorPage() {
   const { t, locale } = useI18n();
+  usePageTitle(t.calculator);
 
   // Acquisition
   const [price, setPrice] = useState(150000);

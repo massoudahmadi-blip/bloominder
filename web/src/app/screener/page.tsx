@@ -7,6 +7,7 @@ import { CommuneRow, ScreenerSort } from '@/lib/types';
 import { formatEUR } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
+import { usePageTitle } from '@/lib/useTitle';
 
 function scoreColor(v: number | null): string {
   if (v == null) return '#94a3b8';
@@ -31,6 +32,7 @@ const pct = (v: number | null, sign = false) =>
 
 export default function ScreenerPage() {
   const { t, locale } = useI18n();
+  usePageTitle(t.markets);
   const router = useRouter();
   const [rows, setRows] = useState<CommuneRow[]>([]);
   const [total, setTotal] = useState(0);

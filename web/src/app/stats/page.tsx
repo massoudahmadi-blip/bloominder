@@ -5,6 +5,7 @@ import { getStats } from '@/lib/api';
 import { StatsData, TopCommune } from '@/lib/types';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
+import { usePageTitle } from '@/lib/useTitle';
 import { AreaChart, BarChart, Donut, RadialWheel, Pyramid } from '@/components/Charts';
 
 const MONTHS_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -12,6 +13,7 @@ const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'
 
 export default function StatsPage() {
   const { t, locale } = useI18n();
+  usePageTitle(t.navStats);
   const [d, setD] = useState<StatsData | null>(null);
 
   useEffect(() => { getStats().then(setD).catch(() => {}); }, []);

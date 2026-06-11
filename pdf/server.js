@@ -3,7 +3,9 @@
 const http = require('http');
 const { chromium } = require('playwright');
 
-const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://bloominder.com').replace(/\/$/, '');
+// RENDER_URL points at the web container on the internal Docker network
+// (avoids public-hostname hairpin NAT); falls back to the public URL.
+const RENDER_URL = (process.env.RENDER_URL || process.env.PUBLIC_URL || 'http://web:3000').replace(/\/$/, '');
 const PORT = process.env.PORT || 3002;
 
 let browser;
@@ -26,9 +28,14 @@ http.createServer(async (req, res) => {
   try {
     const b = await getBrowser();
     page = await b.newPage();
-    const target = `${PUBLIC_URL}/rapport/${code}` + (brand ? `?brand=${encodeURIComponent(brand)}` : '');
-    await page.goto(target, { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(900); // let charts/data settle
+    const target = `${RENDER_URL}/rapport/${code}` + (brand ? `?brand=${encodeURIComponent(brand)}` : '');
+    try {
+      await page.goto(target, { waitUntil: 'networkidle', timeout: 30000 });
+    } catch {
+      // Some pages keep polling and never hit "networkidle" — fall back.
+      await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    }
+    await page.waitForTimeout(1200); // let charts/data settle
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -41,8 +48,9 @@ http.createServer(async (req, res) => {
     });
     res.end(pdf);
   } catch (e) {
-    res.writeHead(500); res.end('pdf error');
+    console.error('pdf error:', e && e.message ? e.message : e);
+    res.writeHead(500); res.end(`pdf error: ${e && e.message ? e.message : 'unknown'}`);
   } finally {
     if (page) await page.close().catch(() => {});
   }
-}).listen(PORT, () => console.log(`Bloominder PDF service on :${PORT} → ${PUBLIC_URL}`));
+}).listen(PORT, () => console.log(`Bloominder PDF service on :${PORT} → ${RENDER_URL}`));

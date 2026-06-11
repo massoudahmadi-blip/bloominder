@@ -62,6 +62,7 @@ services:
     container_name: bloominder_pdf
     restart: unless-stopped
     environment:
+      RENDER_URL: http://web:3000
       PUBLIC_URL: https://${DOMAIN}
     depends_on: [web]
     networks: [internal]

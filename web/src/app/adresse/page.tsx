@@ -11,6 +11,7 @@ import { EnergyBadge } from '@/components/EnergyBadge';
 import { MiniMap } from '@/components/MiniMap';
 import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
 import { estimateValue } from '@/lib/avm';
+import { usePageTitle } from '@/lib/useTitle';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -28,6 +29,7 @@ export default function AdressePage() {
   const [comps, setComps] = useState<Sale[]>([]);
   const [city, setCity] = useState<CommuneProfile | null>(null);
   const [parcel, setParcel] = useState<ParcelFeature | null>(null);
+  usePageTitle(seed?.label ?? t.addressReport);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -58,6 +60,9 @@ export default function AdressePage() {
   const est = estimateValue(comps, surface, seed ? { lat: seed.lat, lon: seed.lon } : undefined);
   const { value, low, high, medianM2: med, n } = est;
   const rel = est.reliability === 'high' ? t.relHigh : est.reliability === 'medium' ? t.relMedium : t.relLow;
+  // Houses/flats estimate well from comps; commercial/land/outbuildings are too
+  // heterogeneous for a confident single figure — show a range + caveat instead.
+  const residential = !!seed?.type && /maison|appartement/i.test(seed.type);
   const m = city?.metrics;
   const land = parcel?.properties.contenance != null ? Number(parcel.properties.contenance) : (seed?.terrain ?? null);
 
@@ -127,13 +132,28 @@ export default function AdressePage() {
 
               <section className="report-card rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.estValue}</h2>
-                <div className="text-3xl font-bold text-brand-800">{value != null ? formatEUR(value, locale) : '—'}</div>
-                {low != null && high != null && (
-                  <div className="text-sm text-slate-500">{formatEUR(low, locale)} – {formatEUR(high, locale)}</div>
+                {residential ? (
+                  <>
+                    <div className="text-3xl font-bold text-brand-800">{value != null ? formatEUR(value, locale) : '—'}</div>
+                    {low != null && high != null && (
+                      <div className="text-sm text-slate-500">{formatEUR(low, locale)} – {formatEUR(high, locale)}</div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-slate-700">
+                      {low != null && high != null
+                        ? `${formatEUR(low, locale)} – ${formatEUR(high, locale)}`
+                        : (value != null ? `≈ ${formatEUR(value, locale)}` : '—')}
+                    </div>
+                    <div className="mt-2 inline-block rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">
+                      {t.limitedComparability}
+                    </div>
+                  </>
                 )}
                 <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-600">
                   <span>{t.estPerM2}: <b>{med != null ? formatPriceM2(med, locale) : '—'}</b></span>
-                  <span>{t.reliability}: <b>{rel}</b></span>
+                  <span>{t.reliability}: <b>{residential ? rel : t.relLow}</b></span>
                   <span className="text-slate-400">{n} {t.basedOn}</span>
                 </div>
               </section>
