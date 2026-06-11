@@ -13,7 +13,7 @@ import MapGL, {
 } from 'react-map-gl/maplibre';
 import type { GeoJSONSource } from 'maplibre-gl';
 import { Sale, BBox } from '@/lib/types';
-import { priceM2Color, formatEUR, formatPriceM2, formatM2 } from '@/lib/format';
+import { priceM2Color, formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
 import { EnergyBadge } from './EnergyBadge';
@@ -87,6 +87,7 @@ export function PropertyMap({
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
+  const [hovered, setHovered] = useState<Sale | null>(null);
 
   const byId = useMemo(() => {
     const m = new Map<string, Sale>();
@@ -172,7 +173,24 @@ export function PropertyMap({
     }
     const sid = (feat.properties as any).sid as string;
     const sale = byId.get(sid);
-    if (sale) onSelect(sale);
+    if (sale) {
+      onSelect(sale);
+      setHovered(null);
+    }
+  };
+
+  // Fluid hover: reveal the detail card on mouse-over (no click needed).
+  const handleMouseMove = (e: MapLayerMouseEvent) => {
+    const feat = e.features?.[0];
+    if (feat && !(feat.properties as any).point_count) {
+      const sale = byId.get((feat.properties as any).sid as string);
+      if (sale) {
+        setCursor('pointer');
+        if (sale.id !== hovered?.id) setHovered(sale);
+        return;
+      }
+    }
+    setCursor('grab');
   };
 
   return (
@@ -186,8 +204,11 @@ export function PropertyMap({
         onLoad={handleLoad}
         onMoveEnd={emitBounds}
         onClick={handleClick}
-        onMouseEnter={() => setCursor('pointer')}
-        onMouseLeave={() => setCursor('grab')}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => {
+          setCursor('grab');
+          setHovered(null);
+        }}
       >
         <NavigationControl position="top-right" showCompass={false} />
 
@@ -231,37 +252,62 @@ export function PropertyMap({
           </Marker>
         ))}
 
-        {selected && (
+        {hovered && (
           <Popup
-            longitude={selected.longitude}
-            latitude={selected.latitude}
+            longitude={hovered.longitude}
+            latitude={hovered.latitude}
             anchor="bottom"
-            offset={14}
+            offset={16}
             closeButton={false}
-            onClose={() => onSelect(null)}
-            maxWidth="260px"
+            closeOnClick={false}
+            onClose={() => setHovered(null)}
+            maxWidth="300px"
+            className="bloom-popup"
           >
-            <div className="w-56 p-3">
-              <div className="text-lg font-semibold text-slate-900">{formatEUR(selected.prix, locale)}</div>
-              {selected.prix_m2 != null && (
-                <div className="text-xs font-medium text-brand-700">{formatPriceM2(selected.prix_m2, locale)}</div>
-              )}
-              <div className="mt-1 truncate text-xs text-slate-500">
-                {selected.adresse ? `${selected.adresse}, ` : ''}
-                {selected.nom_commune}
+            <div className="w-72 p-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold uppercase tracking-tight text-slate-900">
+                    {hovered.adresse || hovered.nom_commune}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                    {hovered.type && <span>{(t as any)[hovered.type] ?? hovered.type}</span>}
+                    {hovered.dpe && <EnergyBadge classe={hovered.dpe} size={16} />}
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-serif text-lg font-semibold leading-none text-slate-900">{formatEUR(hovered.prix, locale)}</div>
+                  {hovered.prix_m2 != null && (
+                    <div className="mt-0.5 text-xs font-medium text-brand-700">{formatPriceM2(hovered.prix_m2, locale)}</div>
+                  )}
+                </div>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
-                {selected.type && <span>{(t as any)[selected.type] ?? selected.type}</span>}
-                {selected.surface_bati != null && <span>{formatM2(selected.surface_bati)}</span>}
-                {selected.nb_pieces != null && <span>{selected.nb_pieces} p.</span>}
-                {selected.dpe && <EnergyBadge classe={selected.dpe} size={16} />}
+
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
+                <Metric label={t.surface} value={hovered.surface_bati != null ? formatM2(hovered.surface_bati) : '—'} />
+                <Metric label={t.land} value={hovered.surface_terrain != null ? formatM2(hovered.surface_terrain) : '—'} />
+                <Metric label={t.soldOn} value={hovered.date ? formatDate(hovered.date, locale) : '—'} />
               </div>
-              {selected.resale_pct != null && (
+
+              {hovered.resale_pct != null && (
                 <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-                  {t.resold} {selected.resale_pct > 0 ? '+' : ''}{selected.resale_pct}%
-                  {selected.resale_prev_date ? ` · ${new Date(selected.resale_prev_date).getFullYear()}` : ''}
+                  {t.resold} {hovered.resale_pct > 0 ? '+' : ''}{hovered.resale_pct}%
+                  {hovered.resale_prev_date ? ` · ${new Date(hovered.resale_prev_date).getFullYear()}` : ''}
                 </div>
               )}
+
+              <button
+                onClick={() => {
+                  onSelect(hovered);
+                  setHovered(null);
+                }}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M3 17l5-5 4 4 8-8M21 8h-4M21 8v4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {t.analyzeAddress}
+              </button>
             </div>
           </Popup>
         )}
@@ -277,6 +323,15 @@ export function PropertyMap({
         </svg>
         {t.parcels}
       </button>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="text-sm font-medium text-slate-700">{value}</div>
     </div>
   );
 }
