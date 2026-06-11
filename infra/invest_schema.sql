@@ -124,6 +124,7 @@ CREATE TABLE IF NOT EXISTS commune_livability (
   health_equip          int,       -- BPE health facilities (domain D)
   transport_equip       int,       -- BPE transport facilities (domain E)
   total_equip           int,       -- BPE total facilities
+  fiber_pct             numeric,   -- % of premises FttH-connectable (ARCEP)
   updated_at            timestamptz DEFAULT now()
 );
 

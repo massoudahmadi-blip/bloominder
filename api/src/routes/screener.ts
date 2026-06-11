@@ -111,7 +111,7 @@ export async function screenerRoutes(app: FastifyInstance) {
     );
     const [livability] = await query(
       `SELECT schools, ecoles, colleges, lycees, education_prioritaire, crime_rate,
-              health_equip, transport_equip
+              health_equip, transport_equip, fiber_pct
        FROM commune_livability WHERE code_commune = $1`,
       [code],
     );

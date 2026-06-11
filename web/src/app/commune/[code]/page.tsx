@@ -184,6 +184,7 @@ export default function CommunePage() {
                   <Kpi label={t.lyceesLbl} value={data.livability.lycees != null ? String(data.livability.lycees) : '—'} />
                   <Kpi label={t.healthLbl} value={data.livability.health_equip != null ? String(data.livability.health_equip) : '—'} />
                   <Kpi label={t.transportLbl} value={data.livability.transport_equip != null ? String(data.livability.transport_equip) : '—'} />
+                  <Kpi label={t.fiberLbl} value={data.livability.fiber_pct != null ? `${data.livability.fiber_pct}%` : '—'} />
                   <Kpi label={t.crimeLbl} value={data.livability.crime_rate != null ? String(data.livability.crime_rate) : '—'} />
                   <Kpi label={t.eduPriority} value={data.livability.education_prioritaire ? '✓' : '—'} />
                 </div>

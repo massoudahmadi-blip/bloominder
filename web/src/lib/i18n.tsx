@@ -186,6 +186,7 @@ const dict = {
     crimeLbl: 'Délinquance /1000',
     healthLbl: 'Santé (équip.)',
     transportLbl: 'Transport (équip.)',
+    fiberLbl: 'Fibre %',
     newsTitle: 'Actualités locales',
   },
   en: {
@@ -369,6 +370,7 @@ const dict = {
     crimeLbl: 'Crime /1000',
     healthLbl: 'Health (facilities)',
     transportLbl: 'Transport (facilities)',
+    fiberLbl: 'Fiber %',
     newsTitle: 'Local news',
   },
 } as const;
