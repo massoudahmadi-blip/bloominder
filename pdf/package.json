@@ -1,0 +1,8 @@
+{
+  "name": "bloominder-pdf",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Renders Bloominder reports to PDF via headless Chromium (Playwright)",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "playwright": "1.48.0" }
+}

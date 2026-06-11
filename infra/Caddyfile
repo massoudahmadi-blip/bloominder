@@ -8,10 +8,15 @@
 	email {$ACME_EMAIL}
 }
 
-# Main site → Next.js. Redirect www to the bare domain.
+# Main site → Next.js, with the PDF renderer on /pdf.
 {$DOMAIN} {
 	encode zstd gzip
-	reverse_proxy web:3000
+	handle /pdf* {
+		reverse_proxy pdf:3002
+	}
+	handle {
+		reverse_proxy web:3000
+	}
 }
 
 www.{$DOMAIN} {

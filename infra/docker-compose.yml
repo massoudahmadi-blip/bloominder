@@ -56,6 +56,16 @@ services:
     restart: unless-stopped
     networks: [internal]
 
+  pdf:
+    profiles: ["prod"]
+    build: ../pdf
+    container_name: bloominder_pdf
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: https://${DOMAIN}
+    depends_on: [web]
+    networks: [internal]
+
   caddy:
     profiles: ["prod"]
     image: caddy:2-alpine

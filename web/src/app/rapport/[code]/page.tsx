@@ -69,7 +69,11 @@ export default function ReportPage() {
           <input value={brand} onChange={(e) => setBrand(e.target.value)}
             className="w-40 rounded-lg border border-slate-200 px-2.5 py-1.5 outline-none focus:border-brand-400" />
         </label>
-        <button onClick={() => window.print()} className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+        <a href={`/pdf?code=${encodeURIComponent(code)}&brand=${encodeURIComponent(brand)}`}
+          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+          {t.downloadPdf}
+        </a>
+        <button onClick={() => window.print()} className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
           {t.printPdf}
         </button>
       </div>
