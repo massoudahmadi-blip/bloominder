@@ -7,9 +7,29 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const fraunces = Fraunces({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-serif' });
 
 export const metadata: Metadata = {
-  title: 'Bloominder — Prix de l’immobilier en France',
+  metadataBase: new URL('https://bloominder.com'),
+  title: {
+    default: 'Bloominder — Intelligence immobilière en France',
+    template: '%s · Bloominder',
+  },
   description:
-    'Découvrez le prix de vente réel de n’importe quelle adresse en France, sur une carte interactive. Données officielles DVF.',
+    'Prix de vente réels (DVF), estimation d’adresse, scores d’investissement, rendement locatif et statistiques de marché — sur toute la France. Données officielles.',
+  keywords: ['DVF', 'prix immobilier France', 'estimation adresse', 'rendement locatif', 'investissement immobilier', 'cadastre', 'prix au m²'],
+  applicationName: 'Bloominder',
+  openGraph: {
+    type: 'website',
+    siteName: 'Bloominder',
+    locale: 'fr_FR',
+    url: 'https://bloominder.com',
+    title: 'Bloominder — Intelligence immobilière en France',
+    description:
+      'Prix de vente réels (DVF), estimation d’adresse, scores d’investissement et rendement locatif sur toute la France.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bloominder — Intelligence immobilière en France',
+    description: 'Prix réels DVF, estimation d’adresse, scores et rendement locatif partout en France.',
+  },
 };
 
 export const viewport: Viewport = {
