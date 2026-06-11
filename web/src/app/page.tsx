@@ -7,7 +7,7 @@ import { PropertyMap } from '@/components/PropertyMap';
 import { ResultsList } from '@/components/ResultsList';
 import { PropertyPanel } from '@/components/PropertyPanel';
 import { Sale, BBox, Filters } from '@/lib/types';
-import { getSalesInView, USING_MOCK } from '@/lib/api';
+import { getSalesInView, getMeta, USING_MOCK } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
 export default function Home() {
@@ -19,6 +19,18 @@ export default function Home() {
   const [selected, setSelected] = useState<Sale | null>(null);
   const [focus, setFocus] = useState<{ lon: number; lat: number; key: number } | null>(null);
   const [mobileTab, setMobileTab] = useState<'map' | 'list'>('map');
+
+  // Default the map to the last 6 months of available data.
+  useEffect(() => {
+    getMeta().then(({ maxDate }) => {
+      if (!maxDate) return;
+      const to = maxDate;
+      const d = new Date(maxDate);
+      d.setMonth(d.getMonth() - 6);
+      const from = d.toISOString().slice(0, 10);
+      setFilters((f) => (f.from || f.to ? f : { ...f, from, to }));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!bbox) return;

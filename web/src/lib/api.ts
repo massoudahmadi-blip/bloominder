@@ -145,6 +145,18 @@ export async function getCommuneTransactions(
   };
 }
 
+/** Latest transaction date (to default the map to the last 6 months of data). */
+export async function getMeta(): Promise<{ maxDate: string | null }> {
+  if (USING_MOCK) return { maxDate: '2025-12-31' };
+  try {
+    const res = await fetch(`${API}/api/meta`);
+    if (!res.ok) return { maxDate: null };
+    return res.json();
+  } catch {
+    return { maxDate: null };
+  }
+}
+
 /** Local news for a commune (headlines + links, lightly tagged). */
 export async function getNews(code: string): Promise<NewsItem[]> {
   if (USING_MOCK) {

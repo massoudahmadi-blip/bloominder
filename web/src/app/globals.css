@@ -12,7 +12,16 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-stone-50 text-slate-900 antialiased;
+}
+
+/* Éditorial Light: serif display for page titles + brand */
+h1 {
+  font-family: var(--font-serif), Georgia, serif;
+  letter-spacing: -0.015em;
+}
+.font-serif {
+  font-family: var(--font-serif), Georgia, serif;
 }
 
 /* Thin, unobtrusive scrollbars for the results panel */

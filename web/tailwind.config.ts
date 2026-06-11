@@ -21,6 +21,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
       },
       boxShadow: {
         panel: '0 10px 40px -12px rgba(15, 23, 42, 0.25)',

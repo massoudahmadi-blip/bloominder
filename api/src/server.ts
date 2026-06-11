@@ -9,6 +9,7 @@ import { propertyRoutes } from './routes/property';
 import { statsRoutes } from './routes/stats';
 import { screenerRoutes } from './routes/screener';
 import { newsRoutes } from './routes/news';
+import { metaRoutes } from './routes/meta';
 
 const app = Fastify({ logger: true });
 
@@ -24,6 +25,7 @@ async function main() {
   await app.register(statsRoutes, { prefix: '/api' });
   await app.register(screenerRoutes, { prefix: '/api' });
   await app.register(newsRoutes, { prefix: '/api' });
+  await app.register(metaRoutes, { prefix: '/api' });
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });

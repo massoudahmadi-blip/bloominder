@@ -16,7 +16,7 @@ export function Header({ onLocate }: { onLocate: (s: AddressSuggestion) => void 
           </svg>
         </span>
         <div className="hidden sm:block">
-          <div className="text-lg font-semibold leading-none tracking-tight">Bloominder</div>
+          <div className="font-serif text-xl font-semibold leading-none tracking-tight">Bloominder</div>
           <div className="text-[11px] leading-tight text-slate-400">{t.tagline}</div>
         </div>
       </div>

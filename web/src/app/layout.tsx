@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
 import { I18nProvider } from '@/lib/i18n';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const fraunces = Fraunces({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-serif' });
 
 export const metadata: Metadata = {
   title: 'Bloominder — Prix de l’immobilier en France',
@@ -19,7 +20,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={inter.variable}>
+    <html lang="fr" className={`${inter.variable} ${fraunces.variable}`}>
       <body>
         <I18nProvider>{children}</I18nProvider>
       </body>
