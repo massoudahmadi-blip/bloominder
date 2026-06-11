@@ -10,7 +10,6 @@ import { ScoreDial } from '@/components/ScoreDial';
 import { EnergyBadge } from '@/components/EnergyBadge';
 import { MiniMap } from '@/components/MiniMap';
 import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
-import { exportEstimationXlsx } from '@/lib/excel';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -67,39 +66,6 @@ export default function AdressePage() {
   const m = city?.metrics;
   const land = parcel?.properties.contenance != null ? Number(parcel.properties.contenance) : (seed?.terrain ?? null);
 
-  const downloadXlsx = () => {
-    if (!seed) return;
-    exportEstimationXlsx({
-      fileName: `bloominder-adresse-${new Date().toISOString().slice(0, 10)}.xlsx`,
-      title: t.addressReport,
-      generatedLabel: `${t.xlsGenerated} ${new Date().toLocaleDateString(locale === 'fr' ? 'fr-FR' : 'en-GB')}`,
-      disclaimer: t.xlsDisclaimer,
-      address: seed.label,
-      surface,
-      estimate: { value, low, high, medianM2: med, reliability: rel, n },
-      parcel: parcel ? {
-        ref: `${parcel.properties.section ?? ''} ${parcel.properties.numero ?? ''}`.trim(),
-        land,
-      } : (land != null ? { ref: '—', land } : null),
-      city: m ? {
-        name: m.nom_commune, scoreGlobal: city?.scores?.score_global ?? null,
-        medianM2: m.median_prix_m2 ?? null, yieldPct: m.rendement_brut_appartement ?? null,
-        population: city?.demo?.population ?? null, income: city?.demo?.median_income ?? null,
-      } : null,
-      comps: comps.slice(0, 15).map((c) => ({
-        date: formatDate(c.date, locale), type: c.type ? ((t as any)[c.type] ?? c.type) : '—',
-        surface: c.surface_bati ?? null, prixM2: c.prix_m2 ?? null, prix: c.prix,
-      })),
-      labels: {
-        sEstimate: t.estValue, sPosition: t.position, sCity: t.cityContext, sComps: t.comparables,
-        estValue: t.estValue, estRange: t.estRange, estPerM2: t.estPerM2, reliability: t.reliability, basedOn: t.basedOn,
-        surface: t.surface, parcelRef: t.parcelLabel, land: t.land,
-        scoreGlobal: t.scoreGlobalLbl, priceM2: t.colPriceM2, yieldLbl: t.kpiYield, population: t.kpiPopulation, income: t.kpiIncome,
-        cDate: t.colDate, cType: t.colType, cSurface: t.surface, cPriceM2: t.colPriceM2, cPrice: t.colPrice,
-      },
-    });
-  };
-
   const vv = (city?.valeur_verte ?? []).filter((x) => x.median_eur_m2 != null);
   const vvMax = Math.max(1, ...vv.map((x) => x.median_eur_m2 as number));
   const s = city?.scores;
@@ -113,6 +79,12 @@ export default function AdressePage() {
           <p className="mt-16 text-center text-slate-400">{t.notFound}</p>
         ) : (
           <>
+            {/* Print-only branded header (nav is hidden when printing) */}
+            <div className="mb-4 hidden print:block">
+              <div className="font-serif text-xl font-semibold text-brand-700">Bloominder</div>
+              <div className="text-xs text-slate-400">bloominder.com · {t.addressReport}</div>
+            </div>
+
             {/* Hero */}
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -130,13 +102,13 @@ export default function AdressePage() {
                 >
                   {t.simulate}
                 </a>
-                <button onClick={downloadXlsx} className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700">{t.downloadExcel}</button>
+                <button onClick={() => window.print()} className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700">{t.printPdf} / PDF</button>
               </div>
             </div>
 
             {/* Recorded sale + estimate */}
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <section className="report-card rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.transactionTitle}</h2>
                 {seed.prix ? (
                   <>
@@ -158,7 +130,7 @@ export default function AdressePage() {
                 )}
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <section className="report-card rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.estValue}</h2>
                 <div className="text-3xl font-bold text-brand-800">{value != null ? formatEUR(value, locale) : '—'}</div>
                 {low != null && high != null && (
@@ -173,7 +145,7 @@ export default function AdressePage() {
             </div>
 
             {/* Position */}
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+            <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.position}</h2>
               <MiniMap lon={seed.lon} lat={seed.lat} parcel={parcel} />
             </section>
@@ -181,7 +153,7 @@ export default function AdressePage() {
             {/* Market context (Markets-style) */}
             {m && (
               <>
-                <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
                   <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.scoresTitle} — {m.nom_commune}</h2>
                   <div className="flex flex-wrap items-center justify-around gap-4">
                     <ScoreDial value={s?.score_global ?? null} label={t.scoreGlobalLbl} size={104} />
@@ -202,7 +174,7 @@ export default function AdressePage() {
 
                 {/* Benchmark band */}
                 {m.median_prix_m2 != null && (city.benchmark.dept != null || city.benchmark.fr != null) && (
-                  <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                  <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
                     <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.benchmarkTitle}</h2>
                     {(() => {
                       const you = m.median_prix_m2 as number;
@@ -233,7 +205,7 @@ export default function AdressePage() {
 
                 {/* Energy / green value */}
                 {(city.dpe?.pct_passoire != null || vv.length > 0) && (
-                  <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                  <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
                     <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.energyTitle}</h2>
                     <div className="mb-4 flex flex-wrap gap-6 text-sm">
                       {city.dpe?.pct_passoire != null && <span className="text-slate-600">{t.passoireLbl}: <b className="text-rose-600">{city.dpe.pct_passoire}%</b></span>}
@@ -260,7 +232,7 @@ export default function AdressePage() {
 
             {/* Comparables */}
             {comps.length > 0 && (
-              <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+              <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.comparables}</h2>
                 <table className="w-full text-sm">
                   <thead className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
