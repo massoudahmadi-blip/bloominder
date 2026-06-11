@@ -10,6 +10,7 @@ import { ScoreDial } from '@/components/ScoreDial';
 import { EnergyBadge } from '@/components/EnergyBadge';
 import { MiniMap } from '@/components/MiniMap';
 import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
+import { estimateValue } from '@/lib/avm';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -52,17 +53,11 @@ export default function AdressePage() {
     fetchParcelAt(seed.lon, seed.lat).then(setParcel).catch(() => {});
   }, [seed]);
 
-  // Comparables-based estimate for the property's living area.
+  // Robust comparables-based estimate for the property's living area.
   const surface = seed?.surface || 70;
-  const m2 = comps.map((c) => c.prix_m2).filter((v): v is number => v != null).sort((a, b) => a - b);
-  const n = m2.length;
-  const at = (q: number) => (n ? m2[Math.min(n - 1, Math.floor(n * q))] : null);
-  const med = n ? m2[Math.floor(n / 2)] : null;
-  const p25 = at(0.25), p75 = at(0.75);
-  const value = med != null ? Math.round(med * surface) : null;
-  const low = p25 != null ? Math.round(p25 * surface) : null;
-  const high = p75 != null ? Math.round(p75 * surface) : null;
-  const rel = n >= 15 ? t.relHigh : n >= 6 ? t.relMedium : t.relLow;
+  const est = estimateValue(comps, surface, seed ? { lat: seed.lat, lon: seed.lon } : undefined);
+  const { value, low, high, medianM2: med, n } = est;
+  const rel = est.reliability === 'high' ? t.relHigh : est.reliability === 'medium' ? t.relMedium : t.relLow;
   const m = city?.metrics;
   const land = parcel?.properties.contenance != null ? Number(parcel.properties.contenance) : (seed?.terrain ?? null);
 
