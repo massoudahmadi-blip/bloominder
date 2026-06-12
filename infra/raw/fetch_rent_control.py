@@ -36,8 +36,8 @@ def fetch_all(base: str, dataset: str):
     return rows
 
 
-def geom_of(rec):
-    g = rec.get("geo_shape")
+def geom_of(rec, m):
+    g = rec.get(m.get("geo_shape", "geo_shape"))
     if not g:
         return None
     if isinstance(g, dict) and g.get("type") == "Feature":
@@ -49,34 +49,56 @@ def sql_str(s):
     return "'" + str(s).replace("'", "''") + "'"
 
 
+# Field mapping (logical -> dataset field name). Paris is the reference shape;
+# other Opendatasoft portals map their own field names here. Add a city by
+# adding an entry and calling with --map <city>.
+MAPS = {
+    "PARIS": {
+        "id_zone": "id_zone", "id_quartier": "id_quartier", "nom_quartier": "nom_quartier",
+        "geo_shape": "geo_shape", "piece": "piece", "epoque": "epoque",
+        "meuble": "meuble_txt", "ref": "ref", "max": "max", "min": "min", "annee": "annee",
+    },
+}
+
+
+def get(rec, m, key, default=None):
+    return rec.get(m.get(key, key), default)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--base", default="https://opendata.paris.fr")
     ap.add_argument("--dataset", default="logement-encadrement-des-loyers")
     ap.add_argument("--city", default="PARIS")
+    ap.add_argument("--map", default=None, help="city key in MAPS, or inline JSON mapping")
     a = ap.parse_args()
+
+    if a.map and a.map.strip().startswith("{"):
+        m = json.loads(a.map)
+    else:
+        m = MAPS.get((a.map or a.city).upper(), MAPS["PARIS"])
 
     rows = fetch_all(a.base, a.dataset)
 
     # The dataset spans several years — keep only the most recent.
-    years = [int(r["annee"]) for r in rows if str(r.get("annee", "")).isdigit()]
+    years = [int(get(r, m, "annee")) for r in rows if str(get(r, m, "annee", "")).isdigit()]
     latest = max(years) if years else 0
-    rows = [r for r in rows if str(r.get("annee")) == str(latest)]
+    rows = [r for r in rows if str(get(r, m, "annee")) == str(latest)] if latest else rows
     sys.stderr.write(f"  keeping {len(rows)} rows for year {latest}\n")
 
     # Geometry granularity is the quartier; rents are keyed by the secteur
     # (id_zone). Store every quartier polygon with a pointer to its secteur.
     quartiers = {}  # id_quartier -> (name, zone_ref, geojson)
     for rec in rows:
-        qid = rec.get("id_quartier")
-        zid = rec.get("id_zone")
+        qid = get(rec, m, "id_quartier")
+        zid = get(rec, m, "id_zone")
         if qid is None or zid is None:
             continue
         if qid not in quartiers:
-            g = geom_of(rec)
+            g = geom_of(rec, m)
             if g:
-                quartiers[qid] = (rec.get("nom_quartier") or "", f"{a.city}-{zid}", json.dumps(g))
+                quartiers[qid] = (get(rec, m, "nom_quartier") or "", f"{a.city}-{zid}", json.dumps(g))
 
     with open(a.out, "w", encoding="utf-8") as f:
         f.write(f"DELETE FROM rent_control_ref WHERE city = {sql_str(a.city)};\n")
@@ -90,15 +112,15 @@ def main():
         n = 0
         seen = set()  # (id_zone, rooms, epoch, furnished) — rents repeat per quartier
         for rec in rows:
-            zid = rec.get("id_zone")
-            if zid is None or rec.get("ref") is None:
+            zid = get(rec, m, "id_zone")
+            if zid is None or get(rec, m, "ref") is None:
                 continue
             try:
-                rooms = min(4, int(rec.get("piece") or 0))
+                rooms = min(4, int(get(rec, m, "piece") or 0))
             except (TypeError, ValueError):
                 continue
-            furnished = "non" not in str(rec.get("meuble_txt", "")).lower()
-            epoch = rec.get("epoque") or ""
+            furnished = "non" not in str(get(rec, m, "meuble", "")).lower()
+            epoch = get(rec, m, "epoque") or ""
             key = (zid, rooms, epoch, furnished)
             if key in seen:
                 continue
@@ -107,8 +129,8 @@ def main():
                 "INSERT INTO rent_control_ref(zone_ref,city,rooms,epoch,furnished,"
                 "ref_eur_m2,ref_majored_eur_m2,ref_minored_eur_m2,year) VALUES "
                 f"({sql_str(f'{a.city}-{zid}')},{sql_str(a.city)},{rooms},{sql_str(epoch)},"
-                f"{'true' if furnished else 'false'},{rec.get('ref')},{rec.get('max')},"
-                f"{rec.get('min')},{int(rec.get('annee') or 0)});\n")
+                f"{'true' if furnished else 'false'},{get(rec, m, 'ref')},{get(rec, m, 'max')},"
+                f"{get(rec, m, 'min')},{int(get(rec, m, 'annee') or 0)});\n")
             n += 1
     sys.stderr.write(f"  wrote {len(quartiers)} quartiers, {n} reference rows to {a.out}\n")
 
