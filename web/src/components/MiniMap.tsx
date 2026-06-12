@@ -17,11 +17,20 @@ const STYLE: any = {
   layers: [{ id: 'base', type: 'raster', source: 'base' }],
 };
 
-// Small map centred on an address, with the IGN cadastre parcels overlaid and
-// (optionally) the exact parcel outlined.
-export function MiniMap({ lon, lat, height = 280, parcel }: {
+// Small map centred on an address, with the IGN cadastre parcels overlaid,
+// (optionally) the exact parcel outlined, and (optionally) comparable-sale pins.
+export function MiniMap({ lon, lat, height = 280, parcel, points }: {
   lon: number; lat: number; height?: number; parcel?: GeoJSON.Feature | null;
+  points?: { lon: number; lat: number; color?: string }[];
 }) {
+  const pointsGeo = points && points.length ? {
+    type: 'FeatureCollection' as const,
+    features: points.map((p) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [p.lon, p.lat] },
+      properties: { color: p.color ?? '#0d9488' },
+    })),
+  } : null;
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200" style={{ height }}>
       <Map
@@ -43,6 +52,14 @@ export function MiniMap({ lon, lat, height = 280, parcel }: {
           <Source id="parcel" type="geojson" data={parcel}>
             <Layer id="parcel-fill" type="fill" paint={{ 'fill-color': '#0d9488', 'fill-opacity': 0.22 }} />
             <Layer id="parcel-line" type="line" paint={{ 'line-color': '#0d9488', 'line-width': 2.5 }} />
+          </Source>
+        )}
+        {pointsGeo && (
+          <Source id="comps" type="geojson" data={pointsGeo}>
+            <Layer id="comps-pts" type="circle" paint={{
+              'circle-radius': 5, 'circle-color': ['get', 'color'],
+              'circle-stroke-width': 1.5, 'circle-stroke-color': '#ffffff', 'circle-opacity': 0.9,
+            }} />
           </Source>
         )}
         <Marker longitude={lon} latitude={lat} anchor="bottom">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getComparables, getCommune, getRentControl, RentControl } from '@/lib/api';
 import { Sale, CommuneProfile } from '@/lib/types';
-import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
+import { formatEUR, formatM2, formatDate, formatPriceM2, priceM2Color } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
 import { ScoreDial } from '@/components/ScoreDial';
@@ -263,7 +263,8 @@ export default function AdressePage() {
             {/* Position */}
             <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.position}</h2>
-              <MiniMap lon={seed.lon} lat={seed.lat} parcel={parcel} />
+              <MiniMap lon={seed.lon} lat={seed.lat} parcel={parcel}
+                points={comps.filter((c) => c.longitude && c.latitude).slice(0, 60).map((c) => ({ lon: c.longitude, lat: c.latitude, color: priceM2Color(c.prix_m2) }))} />
             </section>
 
             {/* Market context (Markets-style) */}
