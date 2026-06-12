@@ -14,6 +14,7 @@ import { RiskScorecard } from '@/components/RiskScorecard';
 import { MarketTemperature } from '@/components/MarketTemperature';
 import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
 import { shortTermRule } from '@/lib/strRules';
+import { KpiStrip, Tone } from '@/components/KpiStrip';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -96,8 +97,19 @@ export default function CommunePage() {
               </div>
             </div>
 
+            {/* Executive summary */}
+            <div className="mt-5">
+              <KpiStrip items={[
+                ...(s?.score_global != null ? [{ label: t.scoreGlobalLbl, value: String(Math.round(s.score_global)), tone: 'brand' as Tone }] : []),
+                ...((m.median_prix_m2_12m ?? m.median_prix_m2) != null ? [{ label: t.kpiPrice12m, value: formatEUR((m.median_prix_m2_12m ?? m.median_prix_m2) as number, locale), tone: 'neutral' as Tone }] : []),
+                ...(m.rendement_brut_appartement != null ? [{ label: t.kpiYield, value: `${m.rendement_brut_appartement}%`, tone: 'brand' as Tone }] : []),
+                ...(m.prix_m2_growth_1y != null ? [{ label: t.kpiGrowth, value: `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%`, tone: (m.prix_m2_growth_1y > 0 ? 'good' : m.prix_m2_growth_1y > -3 ? 'warn' : 'bad') as Tone }] : []),
+                ...(m.median_days_to_sell != null ? [{ label: t.kpiLiquidity, value: `${m.median_days_to_sell} ${t.daysUnit}`, tone: 'neutral' as Tone }] : []),
+              ]} />
+            </div>
+
             {/* Scores */}
-            <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+            <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.scoresTitle}</h2>
               <div className="flex flex-wrap items-center justify-around gap-4">
                 <ScoreDial value={s?.score_global ?? null} label={t.scoreGlobalLbl} size={104} />

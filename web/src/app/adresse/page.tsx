@@ -16,6 +16,7 @@ import { RiskScorecard } from '@/components/RiskScorecard';
 import { MarketTemperature } from '@/components/MarketTemperature';
 import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
 import { shortTermRule } from '@/lib/strRules';
+import { KpiStrip, KpiItem } from '@/components/KpiStrip';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -82,6 +83,15 @@ export default function AdressePage() {
   const renoHigh = reno ? Math.round(reno[1] * surface) : null;
   const banText = dpeClass === 'G' ? t.riskBan2025 : dpeClass === 'F' ? t.riskBan2028 : dpeClass === 'E' ? t.riskBan2034 : null;
   const m = city?.metrics;
+
+  // One-glance executive summary.
+  const priceDelta = seed?.prix && value ? ((seed.prix - value) / value) * 100 : null;
+  const summary: KpiItem[] = [];
+  if (value != null) summary.push({ label: t.estValue, value: formatEUR(value, locale), tone: 'brand' });
+  if (priceDelta != null) summary.push({ label: t.riskPriceFair, value: `${priceDelta > 0 ? '+' : ''}${priceDelta.toFixed(0)}%`, tone: priceDelta > 15 ? 'bad' : priceDelta > 5 ? 'warn' : 'good' });
+  if (m?.rendement_brut_appartement != null) summary.push({ label: t.kpiYield, value: `${m.rendement_brut_appartement}%`, tone: 'brand' });
+  if (m?.prix_m2_growth_1y != null) summary.push({ label: t.kpiGrowth, value: `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%`, tone: m.prix_m2_growth_1y > 0 ? 'good' : m.prix_m2_growth_1y > -3 ? 'warn' : 'bad' });
+  if (dpeClass) summary.push({ label: 'DPE', value: dpeClass, tone: dpeClass === 'G' ? 'bad' : dpeClass === 'F' || dpeClass === 'E' ? 'warn' : 'good' });
   const land = parcel?.properties.contenance != null ? Number(parcel.properties.contenance) : (seed?.terrain ?? null);
 
   const vv = (city?.valeur_verte ?? []).filter((x) => x.median_eur_m2 != null);
@@ -123,6 +133,9 @@ export default function AdressePage() {
                 <button onClick={() => window.print()} className="rounded-full bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700">{t.printPdf} / PDF</button>
               </div>
             </div>
+
+            {/* Executive summary */}
+            {summary.length > 0 && <div className="mt-4"><KpiStrip items={summary} /></div>}
 
             {/* Recorded sale + estimate */}
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
