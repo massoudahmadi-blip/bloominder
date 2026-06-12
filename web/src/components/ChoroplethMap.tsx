@@ -15,8 +15,8 @@ const STYLE: any = {
 const FRANCE_BOUNDS: [[number, number], [number, number]] = [[-5.8, 41.0], [10.2, 51.6]];
 
 const GEO_URL = {
-  dept: 'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson',
-  region: 'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions.geojson',
+  dept: 'https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/departements.geojson',
+  region: 'https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/regions.geojson',
 };
 const PALETTE = {
   price: ['#e0f2f1', '#80cbc4', '#26a69a', '#00897b', '#00695c'],
@@ -27,6 +27,15 @@ function quantiles(vals: number[], n: number): number[] {
   const a = [...vals].sort((x, y) => x - y);
   if (!a.length) return [];
   return Array.from({ length: n }, (_, i) => a[Math.min(a.length - 1, Math.floor((i / (n - 1)) * (a.length - 1)))]);
+}
+
+// Bucket a value into a palette colour using quantile breaks (computed in JS to
+// avoid fragile MapLibre interpolate expressions with tied stops / null inputs).
+function colorFor(v: number | null, breaks: number[], pal: string[]): string {
+  if (v == null || !breaks.length) return '#e5e7eb';
+  let idx = 0;
+  for (const b of breaks) if (v >= b) idx++;
+  return pal[Math.min(pal.length - 1, Math.max(0, idx - 1))];
 }
 
 export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
@@ -43,8 +52,8 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
     if (geoCache.current[level]) { setGeo(geoCache.current[level]); }
     else {
       setGeo(null);
-      fetch(GEO_URL[level]).then((r) => r.json()).then((g) => {
-        if (cancelled) return;
+      fetch(GEO_URL[level]).then((r) => (r.ok ? r.json() : null)).then((g) => {
+        if (cancelled || !g?.features) return;
         geoCache.current[level] = g; setGeo(g);
       }).catch(() => {});
     }
@@ -59,24 +68,16 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
 
   const { data, breaks } = useMemo(() => {
     if (!geo) return { data: null as any, breaks: [] as number[] };
+    const pal = PALETTE[metric];
     const map = new Map(values.map((v) => [v.code, v.value]));
-    const features = geo.features.map((f: any) => {
-      const code = f.properties.code;
-      const value = map.get(code);
-      return { ...f, properties: { ...f.properties, value: value ?? null, label: value != null ? fmtLabel(value) : '' } };
-    });
     const bk = quantiles(values.map((v) => v.value), 5);
-    return { data: { ...geo, features }, breaks: bk };
+    const features = geo.features.map((f: any) => {
+      const value = map.get(f.properties.code) ?? null;
+      return { ...f, properties: { ...f.properties, value, label: value != null ? fmtLabel(value) : '', fillColor: colorFor(value, bk, pal) } };
+    });
+    return { data: { type: 'FeatureCollection', features }, breaks: bk };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo, values, metric]);
-
-  const fillColor = useMemo(() => {
-    const pal = PALETTE[metric];
-    if (breaks.length < 2) return '#cbd5e1';
-    const stops: any[] = ['interpolate', ['linear'], ['get', 'value']];
-    breaks.forEach((b, i) => { stops.push(b, pal[Math.min(pal.length - 1, i)]); });
-    return ['case', ['==', ['get', 'value'], null], '#e5e7eb', stops] as any;
-  }, [breaks, metric]);
 
   const fmt = (v: number) => v.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB');
 
@@ -93,10 +94,10 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
   return (
     <div className="relative h-full w-full">
       <MapGL
-        initialViewState={{ longitude: 2.4, latitude: 46.7, zoom: 4.55 }}
+        initialViewState={{ longitude: 2.4, latitude: 46.7, zoom: 4.8 }}
         mapStyle={STYLE}
         maxBounds={FRANCE_BOUNDS}
-        minZoom={4.3}
+        minZoom={4.5}
         interactiveLayerIds={data ? ['choro-fill'] : []}
         onMouseMove={onMove}
         onMouseLeave={() => setHovered(null)}
@@ -106,7 +107,7 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
         <NavigationControl position="top-right" showCompass={false} />
         {data && (
           <Source id="choro" type="geojson" data={data}>
-            <Layer id="choro-fill" type="fill" paint={{ 'fill-color': fillColor, 'fill-opacity': 0.8 }} />
+            <Layer id="choro-fill" type="fill" paint={{ 'fill-color': ['get', 'fillColor'], 'fill-opacity': 0.8 }} />
             <Layer id="choro-line" type="line" paint={{ 'line-color': '#ffffff', 'line-width': 0.8 }} />
             <Layer id="choro-label" type="symbol"
               layout={{ 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': level === 'region' ? 13 : 10, 'text-allow-overlap': false }}
