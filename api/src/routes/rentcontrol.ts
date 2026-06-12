@@ -18,8 +18,8 @@ export async function rentControlRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ error: 'invalid query' });
     const q = parsed.data;
 
-    const [zone] = await query<{ id: string; name: string; city: string }>(
-      `SELECT id, name, city FROM rent_control_zone
+    const [zone] = await query<{ name: string; city: string; zone_ref: string }>(
+      `SELECT name, city, zone_ref FROM rent_control_zone
        WHERE ST_Contains(geom, ST_SetSRID(ST_MakePoint($1, $2), 4326)) LIMIT 1`,
       [q.lon, q.lat],
     );
@@ -27,7 +27,7 @@ export async function rentControlRoutes(app: FastifyInstance) {
 
     const rooms = q.rooms ?? 2;
     const furnished = q.furnished ?? false;
-    const params: unknown[] = [zone.id, rooms, furnished];
+    const params: unknown[] = [zone.zone_ref, rooms, furnished];
     let epochClause = '';
     if (q.epoch) { params.push(q.epoch); epochClause = `AND epoch = $${params.length}`; }
 
@@ -38,7 +38,7 @@ export async function rentControlRoutes(app: FastifyInstance) {
               round(avg(ref_minored_eur_m2), 1) AS minored,
               max(year) AS year
        FROM rent_control_ref
-       WHERE zone_id = $1 AND rooms = $2 AND furnished = $3 ${epochClause}`,
+       WHERE zone_ref = $1 AND rooms = $2 AND furnished = $3 ${epochClause}`,
       params,
     );
 

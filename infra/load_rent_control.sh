@@ -14,6 +14,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 DB="${POSTGRES_DB:-bloominder}"; USR="${POSTGRES_USER:-bloominder}"
 psql() { docker compose -f "$HERE/docker-compose.yml" exec -T db psql -v ON_ERROR_STOP=1 -U "$USR" -d "$DB" "$@"; }
 
+echo ">> Resetting rent_control tables (schema changed)..."
+psql -c "DROP TABLE IF EXISTS rent_control_ref, rent_control_zone CASCADE;" >/dev/null
 echo ">> Ensuring schema (rent_control_*)..."
 psql < "$HERE/invest_schema.sql" >/dev/null
 
