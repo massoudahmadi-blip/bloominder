@@ -16,6 +16,7 @@ export interface RiskInput {
   priceM2Appt?: number | null;
   income?: number | null;
   growth1y?: number | null;
+  strStrict?: boolean | null;   // short-term-rental strict tier
 }
 
 export function RiskScorecard(props: RiskInput) {
@@ -74,6 +75,13 @@ export function RiskScorecard(props: RiskInput) {
       level: g > 0 ? 'good' : g > -5 ? 'warn' : 'bad',
       label: t.riskTrend,
       detail: `${g > 0 ? '+' : ''}${g}% ${t.riskOneYear}`,
+    });
+  }
+  if (props.strStrict != null) {
+    flags.push({
+      level: props.strStrict ? 'warn' : 'good',
+      label: t.riskStr,
+      detail: props.strStrict ? t.riskStrStrict : t.riskStrOk,
     });
   }
 

@@ -14,6 +14,8 @@ import { estimateValue } from '@/lib/avm';
 import { usePageTitle } from '@/lib/useTitle';
 import { RiskScorecard } from '@/components/RiskScorecard';
 import { MarketTemperature } from '@/components/MarketTemperature';
+import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
+import { shortTermRule } from '@/lib/strRules';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -231,6 +233,7 @@ export default function AdressePage() {
                 priceM2Appt={m?.median_prix_m2_appartement ?? null}
                 income={city?.demo?.median_income ?? null}
                 growth1y={m?.prix_m2_growth_1y ?? null}
+                strStrict={seed.citycode ? shortTermRule(seed.citycode, city?.demo?.population).strict : null}
               />
             </div>
 
@@ -239,6 +242,10 @@ export default function AdressePage() {
                 <MarketTemperature growth1y={m.prix_m2_growth_1y ?? null} daysToSell={m.median_days_to_sell ?? null} />
               </div>
             )}
+
+            <div className="mt-4">
+              <ShortTermRentalNote code={seed.citycode} population={city?.demo?.population ?? null} />
+            </div>
 
             {/* Position */}
             <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">

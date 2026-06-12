@@ -12,6 +12,8 @@ import { SubNav } from '@/components/SubNav';
 import { usePageTitle } from '@/lib/useTitle';
 import { RiskScorecard } from '@/components/RiskScorecard';
 import { MarketTemperature } from '@/components/MarketTemperature';
+import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
+import { shortTermRule } from '@/lib/strRules';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -134,7 +136,13 @@ export default function CommunePage() {
                 priceM2Appt={m.median_prix_m2_appartement ?? null}
                 income={data.demo?.median_income ?? null}
                 growth1y={m.prix_m2_growth_1y ?? null}
+                strStrict={shortTermRule(m.code_commune, data.demo?.population).strict}
               />
+            </div>
+
+            {/* Short-term-rental rules */}
+            <div className="mt-4">
+              <ShortTermRentalNote code={m.code_commune} population={data.demo?.population ?? null} />
             </div>
 
             {/* France-vs-area benchmark */}
