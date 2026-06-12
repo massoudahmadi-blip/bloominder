@@ -2,17 +2,29 @@
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import MapGL, { Source, Layer, Popup, NavigationControl, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import MapGL, { Source, Layer, Marker, Popup, NavigationControl, type MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import { useRouter } from 'next/navigation';
 import { getChoropleth, ChoroPoint } from '@/lib/api';
 
 const STYLE: any = {
   version: 8,
-  glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
   sources: { base: { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', 'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap, © CARTO' } },
   layers: [{ id: 'base', type: 'raster', source: 'base' }],
 };
-const FRANCE_BOUNDS: [[number, number], [number, number]] = [[-5.8, 41.0], [10.2, 51.6]];
+
+// Rough centroid (average of the largest ring) for placing a value label.
+function centroid(geom: any): [number, number] | null {
+  let ring: number[][] | null = null;
+  if (geom?.type === 'Polygon') ring = geom.coordinates[0];
+  else if (geom?.type === 'MultiPolygon') {
+    ring = geom.coordinates.reduce((best: number[][] | null, poly: number[][][]) =>
+      (!best || poly[0].length > best.length ? poly[0] : best), null);
+  }
+  if (!ring || !ring.length) return null;
+  let lon = 0, lat = 0;
+  for (const c of ring) { lon += c[0]; lat += c[1]; }
+  return [lon / ring.length, lat / ring.length];
+}
 
 const GEO_URL = {
   dept: 'https://cdn.jsdelivr.net/gh/gregoiredavid/france-geojson@master/departements.geojson',
@@ -79,6 +91,15 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo, values, metric]);
 
+  // Value labels as HTML markers (no external glyph dependency).
+  const labels = useMemo(() => {
+    if (!data) return [] as { lon: number; lat: number; label: string }[];
+    return data.features
+      .filter((f: any) => f.properties.label)
+      .map((f: any) => { const c = centroid(f.geometry); return c ? { lon: c[0], lat: c[1], label: f.properties.label } : null; })
+      .filter(Boolean) as { lon: number; lat: number; label: string }[];
+  }, [data]);
+
   const fmt = (v: number) => v.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB');
 
   const onMove = (e: MapLayerMouseEvent) => {
@@ -96,8 +117,6 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
       <MapGL
         initialViewState={{ longitude: 2.4, latitude: 46.7, zoom: 4.8 }}
         mapStyle={STYLE}
-        maxBounds={FRANCE_BOUNDS}
-        minZoom={4.5}
         interactiveLayerIds={data ? ['choro-fill'] : []}
         onMouseMove={onMove}
         onMouseLeave={() => setHovered(null)}
@@ -109,11 +128,13 @@ export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
           <Source id="choro" type="geojson" data={data}>
             <Layer id="choro-fill" type="fill" paint={{ 'fill-color': ['get', 'fillColor'], 'fill-opacity': 0.8 }} />
             <Layer id="choro-line" type="line" paint={{ 'line-color': '#ffffff', 'line-width': 0.8 }} />
-            <Layer id="choro-label" type="symbol"
-              layout={{ 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': level === 'region' ? 13 : 10, 'text-allow-overlap': false }}
-              paint={{ 'text-color': '#0f172a', 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 }} />
           </Source>
         )}
+        {labels.map((l, i) => (
+          <Marker key={i} longitude={l.lon} latitude={l.lat}>
+            <span className="pointer-events-none rounded bg-white/70 px-1 text-[10px] font-semibold text-slate-800">{l.label}</span>
+          </Marker>
+        ))}
         {hovered && (
           <Popup longitude={hovered.lon} latitude={hovered.lat} anchor="bottom" offset={8} closeButton={false} closeOnClick={false}>
             <div className="px-1 py-0.5 text-xs">
