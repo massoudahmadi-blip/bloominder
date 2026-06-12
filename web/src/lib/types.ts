@@ -178,5 +178,6 @@ export interface CommuneProfile {
   risk: { seismic_zone: string | null; risks: string | null; icpe_count: number | null; seveso_count: number | null } | null;
   livability: { schools: number | null; ecoles: number | null; colleges: number | null; lycees: number | null; education_prioritaire: boolean | null; crime_rate: number | null; health_equip: number | null; transport_equip: number | null; fiber_pct: number | null } | null;
   benchmark: { dept: number | null; fr: number | null };
+  zone_tendue?: boolean;
   valeur_verte: { classe: string; ventes: number; median_eur_m2: number | null }[];
 }

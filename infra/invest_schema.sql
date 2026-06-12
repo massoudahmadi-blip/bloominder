@@ -204,6 +204,13 @@ CREATE TABLE IF NOT EXISTS commune_dpe (
 -- Rent control (encadrement des loyers) reference rents, per quartier zone.
 -- Zones carry a polygon for point-in-polygon address lookup; refs hold the
 -- €/m² reference / majored / minored rents by rooms × epoch × furnished.
+-- Communes in "zone tendue" (DILA service-public reference; preavis réduit).
+-- Drives the short-term-rental / TLV / encadrement signal.
+CREATE TABLE IF NOT EXISTS commune_zone_tendue (
+  code_commune text PRIMARY KEY,
+  zone_abc     text
+);
+
 -- One row per quartier polygon (for point-in-polygon address lookup); zone_ref
 -- points at the rent secteur whose reference rents apply.
 CREATE TABLE IF NOT EXISTS rent_control_zone (

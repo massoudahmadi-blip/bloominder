@@ -233,7 +233,7 @@ export default function AdressePage() {
                 priceM2Appt={m?.median_prix_m2_appartement ?? null}
                 income={city?.demo?.median_income ?? null}
                 growth1y={m?.prix_m2_growth_1y ?? null}
-                strStrict={seed.citycode ? shortTermRule(seed.citycode, city?.demo?.population).strict : null}
+                strStrict={seed.citycode ? shortTermRule(seed.citycode, city?.demo?.population, city?.zone_tendue).tendue : null}
               />
             </div>
 
@@ -244,7 +244,7 @@ export default function AdressePage() {
             )}
 
             <div className="mt-4">
-              <ShortTermRentalNote code={seed.citycode} population={city?.demo?.population ?? null} />
+              <ShortTermRentalNote code={seed.citycode} population={city?.demo?.population ?? null} zoneTendue={city?.zone_tendue} />
             </div>
 
             {/* Position */}

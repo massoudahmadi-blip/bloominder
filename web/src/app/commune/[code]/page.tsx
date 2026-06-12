@@ -136,13 +136,13 @@ export default function CommunePage() {
                 priceM2Appt={m.median_prix_m2_appartement ?? null}
                 income={data.demo?.median_income ?? null}
                 growth1y={m.prix_m2_growth_1y ?? null}
-                strStrict={shortTermRule(m.code_commune, data.demo?.population).strict}
+                strStrict={shortTermRule(m.code_commune, data.demo?.population, data.zone_tendue).tendue}
               />
             </div>
 
             {/* Short-term-rental rules */}
             <div className="mt-4">
-              <ShortTermRentalNote code={m.code_commune} population={data.demo?.population ?? null} />
+              <ShortTermRentalNote code={m.code_commune} population={data.demo?.population ?? null} zoneTendue={data.zone_tendue} />
             </div>
 
             {/* France-vs-area benchmark */}

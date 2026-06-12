@@ -24,15 +24,20 @@ const STRICT_CODES = new Set<string>([
 ]);
 
 export interface StrRule {
-  strict: boolean;
-  dayCap: number; // primary-residence annual cap (days)
+  strict: boolean;   // change-of-use / compensation regime
+  tendue: boolean;   // zone tendue (reduced notice, registration, 120-day cap)
+  dayCap: number;    // primary-residence annual cap (days)
 }
 
-export function shortTermRule(code: string | null | undefined, population: number | null | undefined): StrRule {
+export function shortTermRule(
+  code: string | null | undefined,
+  population: number | null | undefined,
+  zoneTendue?: boolean | null,
+): StrRule {
   const dept = (code ?? '').slice(0, 2);
   const strict =
     (population ?? 0) > 200000 ||
     ['75', '92', '93', '94'].includes(dept) ||
     (code ? STRICT_CODES.has(code) : false);
-  return { strict, dayCap: 120 };
+  return { strict, tendue: strict || !!zoneTendue, dayCap: 120 };
 }

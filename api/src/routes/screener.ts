@@ -123,6 +123,14 @@ export async function screenerRoutes(app: FastifyInstance) {
     const [benchFr] = await query<{ median_prix_m2: number }>(
       `SELECT median_prix_m2 FROM benchmark WHERE scope='FR' AND code='FR'`,
     );
+    let zoneTendue = false;
+    try {
+      const [zt] = await query<{ x: number }>(
+        `SELECT 1 AS x FROM commune_zone_tendue WHERE code_commune = $1`,
+        [code],
+      );
+      zoneTendue = !!zt;
+    } catch { /* table not loaded yet */ }
     const valeur_verte = await query(
       `SELECT td.etiquette_dpe AS classe, count(*)::int AS ventes,
               round(percentile_cont(0.5) WITHIN GROUP (ORDER BY t.prix_m2)) AS median_eur_m2
@@ -136,6 +144,7 @@ export async function screenerRoutes(app: FastifyInstance) {
       resale: resale ?? null, tax: tax ?? null, airbnb: airbnb ?? null, risk: risk ?? null,
       livability: livability ?? null,
       benchmark: { dept: benchDep?.median_prix_m2 ?? null, fr: benchFr?.median_prix_m2 ?? null },
+      zone_tendue: zoneTendue,
       valeur_verte,
     };
   });
