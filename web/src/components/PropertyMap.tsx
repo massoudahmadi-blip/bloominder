@@ -240,6 +240,8 @@ export function PropertyMap({
     if (s.prix_m2 != null) p.set('prixm2', String(Math.round(s.prix_m2)));
     if (s.dpe) p.set('dpe', s.dpe);
     if (s.nb_pieces != null) p.set('pieces', String(s.nb_pieces));
+    if (s.resale_pct != null) p.set('resale', String(s.resale_pct));
+    if (s.resale_prev_date) p.set('resaledate', s.resale_prev_date);
     router.push(`/adresse?${p.toString()}`);
   };
 

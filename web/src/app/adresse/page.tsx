@@ -22,7 +22,13 @@ interface Seed {
   lat: number; lon: number; label: string; citycode?: string;
   surface?: number; terrain?: number; type?: string; prix?: number;
   date?: string; prixm2?: number; dpe?: string; pieces?: number;
+  resale?: number; resaleDate?: string;
 }
+
+// Rough energy-renovation cost (€/m²) to lift a property out of the rental ban.
+const RENO_COST_PER_M2: Record<string, [number, number]> = {
+  G: [350, 700], F: [250, 500], E: [150, 350],
+};
 
 export default function AdressePage() {
   const { t, locale } = useI18n();
@@ -45,6 +51,7 @@ export default function AdressePage() {
       surface: num('surface'), terrain: num('terrain'), type: p.get('type') || undefined,
       prix: num('prix'), date: p.get('date') || undefined, prixm2: num('prixm2'),
       dpe: p.get('dpe') || undefined, pieces: num('pieces'),
+      resale: num('resale'), resaleDate: p.get('resaledate') || undefined,
     });
   }, []);
 
@@ -64,6 +71,11 @@ export default function AdressePage() {
   // Houses/flats estimate well from comps; commercial/land/outbuildings are too
   // heterogeneous for a confident single figure — show a range + caveat instead.
   const residential = !!seed?.type && /maison|appartement/i.test(seed.type);
+  const dpeClass = seed?.dpe?.toUpperCase();
+  const reno = dpeClass && RENO_COST_PER_M2[dpeClass] ? RENO_COST_PER_M2[dpeClass] : null;
+  const renoLow = reno ? Math.round(reno[0] * surface) : null;
+  const renoHigh = reno ? Math.round(reno[1] * surface) : null;
+  const banText = dpeClass === 'G' ? t.riskBan2025 : dpeClass === 'F' ? t.riskBan2028 : dpeClass === 'E' ? t.riskBan2034 : null;
   const m = city?.metrics;
   const land = parcel?.properties.contenance != null ? Number(parcel.properties.contenance) : (seed?.terrain ?? null);
 
@@ -159,6 +171,34 @@ export default function AdressePage() {
                 </div>
               </section>
             </div>
+
+            {/* Same-property price history (resale) */}
+            {seed.resale != null && (
+              <div className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm">
+                <span className="font-semibold text-slate-700">{t.histTitle}: </span>
+                <span className={seed.resale >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                  {seed.resale > 0 ? '+' : ''}{seed.resale}%
+                </span>{' '}
+                <span className="text-slate-500">{t.histVsPrev}{seed.resaleDate ? ` (${new Date(seed.resaleDate).getFullYear()})` : ''}</span>
+              </div>
+            )}
+
+            {/* DPE rental-ban + renovation cost */}
+            {banText && (
+              <div className="report-card mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {t.renoTitle} — DPE {dpeClass}
+                </div>
+                <p className="mt-1 text-sm text-amber-700">{banText}.</p>
+                {renoLow != null && renoHigh != null && (
+                  <p className="mt-1 text-sm text-amber-700">{t.renoCost}: <b>{formatEUR(renoLow, locale)} – {formatEUR(renoHigh, locale)}</b></p>
+                )}
+                <p className="mt-1 text-[11px] text-amber-600">{t.renoNote}</p>
+              </div>
+            )}
 
             {/* Risk scorecard */}
             <div className="mt-4">
