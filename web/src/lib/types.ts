@@ -130,6 +130,7 @@ export interface ScreenerParams {
   postal?: string;
   minYield?: number;
   minScore?: number;
+  maxPriceM2?: number;
   q?: string;
   sort?: ScreenerSort;
   dir?: 'asc' | 'desc';

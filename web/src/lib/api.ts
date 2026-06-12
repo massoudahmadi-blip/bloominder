@@ -120,6 +120,7 @@ export async function getScreener(p: ScreenerParams): Promise<ScreenerResult> {
   if (p.postal) sp.set('postal', p.postal);
   if (p.minYield != null) sp.set('minYield', String(p.minYield));
   if (p.minScore != null) sp.set('minScore', String(p.minScore));
+  if (p.maxPriceM2 != null) sp.set('maxPriceM2', String(p.maxPriceM2));
   if (p.q) sp.set('q', p.q);
   if (p.sort) sp.set('sort', p.sort);
   if (p.dir) sp.set('dir', p.dir);

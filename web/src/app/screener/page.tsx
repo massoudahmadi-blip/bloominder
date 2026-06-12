@@ -45,6 +45,7 @@ export default function ScreenerPage() {
   const [q, setQ] = useState('');
   const [minYield, setMinYield] = useState('');
   const [minScore, setMinScore] = useState('');
+  const [maxPriceM2, setMaxPriceM2] = useState('');
   const [depts, setDepts] = useState<{ code: string; nom: string }[]>([]);
   const pageSize = 25;
 
@@ -53,6 +54,9 @@ export default function ScreenerPage() {
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setDepts(Array.isArray(d) ? d : []))
       .catch(() => {});
+    // Pre-fill the €/m² budget from a "Puis-je acheter" deep-link (?maxm2=).
+    const v = new URLSearchParams(window.location.search).get('maxm2');
+    if (v) setMaxPriceM2(v);
   }, []);
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export default function ScreenerPage() {
         q: q || undefined,
         minYield: minYield ? Number(minYield) : undefined,
         minScore: minScore ? Number(minScore) : undefined,
+        maxPriceM2: maxPriceM2 ? Number(maxPriceM2) : undefined,
       })
         .then((r) => {
           if (cancelled) return;
@@ -76,7 +81,21 @@ export default function ScreenerPage() {
         .finally(() => !cancelled && setLoading(false));
     }, 250);
     return () => { cancelled = true; clearTimeout(h); };
-  }, [sort, dir, page, dept, postal, q, minYield, minScore]);
+  }, [sort, dir, page, dept, postal, q, minYield, minScore, maxPriceM2]);
+
+  const exportCsv = () => {
+    const head = ['Commune', 'Dept', 'Ventes', 'Prix m2 (12m)', 'Evol 1an %', 'Rendement %', 'Score'];
+    const lines = rows.map((r) => [
+      r.nom_commune, r.code_departement, r.ventes_total,
+      r.median_prix_m2_12m ?? r.median_prix_m2 ?? '', r.prix_m2_growth_1y ?? '',
+      r.rendement_brut_appartement ?? '', r.score_global ?? '',
+    ].join(';'));
+    const csv = '﻿' + [head.join(';'), ...lines].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `bloominder-marches-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  };
 
   const toggleSort = (col: ScreenerSort) => {
     if (sort === col) setDir(dir === 'desc' ? 'asc' : 'desc');
@@ -128,10 +147,25 @@ export default function ScreenerPage() {
             <input type="number" value={minScore} onChange={(e) => { setMinScore(e.target.value); setPage(1); }}
               className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
           </Field>
+          <Field label={t.filterMaxPriceM2}>
+            <input type="number" value={maxPriceM2} onChange={(e) => { setMaxPriceM2(e.target.value); setPage(1); }}
+              placeholder="€/m²" className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
+          </Field>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-sm text-slate-500">{total.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB')} {t.screenerResults}</span>
+          <button onClick={exportCsv} disabled={!rows.length}
+            className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-brand-300 hover:text-brand-700 disabled:opacity-40">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {t.exportCsv}
+          </button>
         </div>
 
         {/* Table */}
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>

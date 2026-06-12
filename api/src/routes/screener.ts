@@ -14,6 +14,7 @@ const ScreenerQuery = z.object({
   minVentes: z.coerce.number().optional(),
   minYield: z.coerce.number().optional(),
   minScore: z.coerce.number().optional(),
+  maxPriceM2: z.coerce.number().optional(),
   q: z.string().optional(), // commune name contains
   sort: z.enum(SORTS).default('score_global'),
   dir: z.enum(['asc', 'desc']).default('desc'),
@@ -40,6 +41,7 @@ export async function screenerRoutes(app: FastifyInstance) {
     if (q.minVentes != null) add('m.ventes_total >= ?', q.minVentes);
     if (q.minYield != null) add('m.rendement_brut_appartement >= ?', q.minYield);
     if (q.minScore != null) add('s.score_global >= ?', q.minScore);
+    if (q.maxPriceM2 != null) add('m.median_prix_m2 <= ?', q.maxPriceM2);
     if (q.q) add('m.nom_commune ILIKE ?', `%${q.q}%`);
     const whereSql = where.join(' AND ');
 

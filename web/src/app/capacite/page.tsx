@@ -73,6 +73,12 @@ export default function CapacitePage() {
                 >
                   {t.capTestInvest}
                 </a>
+                <a
+                  href={`/screener?maxm2=${Math.round(r.maxPrice / 50)}`}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  {t.capSeeMarkets}
+                </a>
               </>
             ) : (
               <p className="mt-3 rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-700">{t.capCantBorrow}</p>
