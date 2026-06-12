@@ -71,6 +71,27 @@ export async function getComparables(lat: number, lon: number, type?: string | n
   }));
 }
 
+export interface RentControl {
+  controlled: boolean;
+  zone?: string; city?: string; rooms?: number; furnished?: boolean;
+  ref?: number | null; majored?: number; minored?: number; year?: number;
+}
+
+/** Rent-control reference rents for an address (encadrement des loyers). */
+export async function getRentControl(lat: number, lon: number, rooms?: number | null, furnished?: boolean): Promise<RentControl> {
+  if (USING_MOCK) return { controlled: false };
+  const sp = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  if (rooms) sp.set('rooms', String(Math.min(4, rooms)));
+  if (furnished != null) sp.set('furnished', String(furnished));
+  try {
+    const res = await fetch(`${API}/api/rent-control?${sp.toString()}`);
+    if (!res.ok) return { controlled: false };
+    return res.json();
+  } catch {
+    return { controlled: false };
+  }
+}
+
 export async function getTrend(codeCommune?: string, type?: string | null): Promise<YearTrend[]> {
   if (USING_MOCK) return mockTrend(codeCommune, type);
   if (!codeCommune) return [];

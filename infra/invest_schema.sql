@@ -200,3 +200,27 @@ CREATE TABLE IF NOT EXISTS commune_dpe (
   pct_abc       numeric,   -- % A/B/C (efficient)
   computed_at   timestamptz DEFAULT now()
 );
+
+-- Rent control (encadrement des loyers) reference rents, per quartier zone.
+-- Zones carry a polygon for point-in-polygon address lookup; refs hold the
+-- €/m² reference / majored / minored rents by rooms × epoch × furnished.
+CREATE TABLE IF NOT EXISTS rent_control_zone (
+  id    text PRIMARY KEY,         -- "<VILLE>-<id_zone>"
+  city  text,
+  name  text,
+  geom  geometry(MultiPolygon, 4326)
+);
+CREATE INDEX IF NOT EXISTS rent_control_zone_gix ON rent_control_zone USING GIST (geom);
+
+CREATE TABLE IF NOT EXISTS rent_control_ref (
+  zone_id             text REFERENCES rent_control_zone(id) ON DELETE CASCADE,
+  city                text,
+  rooms               int,       -- 1..4 (4 = 4 rooms and more)
+  epoch               text,      -- 'avant 1946' | '1946-1970' | '1971-1990' | 'apres 1990'
+  furnished           boolean,
+  ref_eur_m2          numeric,
+  ref_majored_eur_m2  numeric,
+  ref_minored_eur_m2  numeric,
+  year                int
+);
+CREATE INDEX IF NOT EXISTS rent_control_ref_zone ON rent_control_ref (zone_id);

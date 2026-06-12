@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getComparables, getCommune } from '@/lib/api';
+import { getComparables, getCommune, getRentControl, RentControl } from '@/lib/api';
 import { Sale, CommuneProfile } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2 } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
@@ -37,6 +37,7 @@ export default function AdressePage() {
   const [comps, setComps] = useState<Sale[]>([]);
   const [city, setCity] = useState<CommuneProfile | null>(null);
   const [parcel, setParcel] = useState<ParcelFeature | null>(null);
+  const [rentCtl, setRentCtl] = useState<RentControl | null>(null);
   usePageTitle(seed?.label ?? t.addressReport);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function AdressePage() {
     getComparables(seed.lat, seed.lon, seed.type ?? null).then(setComps).catch(() => {});
     if (seed.citycode) getCommune(seed.citycode).then(setCity).catch(() => {});
     fetchParcelAt(seed.lon, seed.lat).then(setParcel).catch(() => {});
+    getRentControl(seed.lat, seed.lon, seed.pieces ?? null, false).then(setRentCtl).catch(() => {});
   }, [seed]);
 
   // Robust comparables-based estimate for the property's living area.
@@ -198,6 +200,22 @@ export default function AdressePage() {
                   <p className="mt-1 text-sm text-amber-700">{t.renoCost}: <b>{formatEUR(renoLow, locale)} – {formatEUR(renoHigh, locale)}</b></p>
                 )}
                 <p className="mt-1 text-[11px] text-amber-600">{t.renoNote}</p>
+              </div>
+            )}
+
+            {/* Rent control (encadrement des loyers) */}
+            {rentCtl?.controlled && rentCtl.majored != null && (
+              <div className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.rcTitle}</h2>
+                <p className="text-sm text-slate-700">{t.rcZone}: <b>{rentCtl.zone}</b> ({rentCtl.city})</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {t.rcMajored}: <b>{rentCtl.majored} €/m²</b> → {t.rcMaxRent}{' '}
+                  <b>{formatEUR(Math.round((rentCtl.majored as number) * surface), locale)} /mois</b>{' '}
+                  (T{rentCtl.rooms}, {t.rcUnfurnished})
+                </p>
+                {(m?.loyer_m2_appartement ?? 0) * surface > (rentCtl.majored as number) * surface && (
+                  <p className="mt-2 inline-block rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">{t.rcOver}</p>
+                )}
               </div>
             )}
 
