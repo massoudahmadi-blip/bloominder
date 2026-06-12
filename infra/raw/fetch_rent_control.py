@@ -15,33 +15,24 @@ import sys
 import urllib.request
 
 def fetch_all(base: str, dataset: str):
-    # No `select`: "max"/"min" are reserved keywords in the API query language
-    # and 400 if used as field names. The default response returns all fields
-    # (incl. geo_shape) anyway. A real User-Agent avoids the WAF rejecting
-    # "Python-urllib" with a 400/403.
-    rows = []
-    offset = 0
-    while True:
-        url = (f"{base}/api/explore/v2.1/catalog/datasets/{dataset}/records"
-               f"?limit=100&offset={offset}")
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Bloominder data loader; +https://bloominder.com)",
-            "Accept": "application/json",
-        })
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                data = json.load(r)
-        except urllib.error.HTTPError as e:
-            sys.stderr.write(f"\nHTTP {e.code} on {url}\n{e.read().decode('utf-8', 'replace')[:500]}\n")
-            raise
-        results = data.get("results", [])
-        rows.extend(results)
-        total = data.get("total_count", len(rows))
-        offset += 100
-        sys.stderr.write(f"  fetched {len(rows)}/{total}\r")
-        if offset >= total or not results:
-            break
-    sys.stderr.write("\n")
+    # The paginated /records endpoint caps offset+limit at 10000, but this
+    # dataset is larger — use /exports/json, which streams every record (all
+    # fields incl. geo_shape) with no pagination cap. A real User-Agent avoids
+    # the WAF rejecting "Python-urllib".
+    url = f"{base}/api/explore/v2.1/catalog/datasets/{dataset}/exports/json"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Bloominder data loader; +https://bloominder.com)",
+        "Accept": "application/json",
+        "Accept-Encoding": "identity",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            data = json.load(r)
+    except urllib.error.HTTPError as e:
+        sys.stderr.write(f"\nHTTP {e.code} on {url}\n{e.read().decode('utf-8', 'replace')[:500]}\n")
+        raise
+    rows = data if isinstance(data, list) else data.get("results", [])
+    sys.stderr.write(f"  fetched {len(rows)} records\n")
     return rows
 
 
