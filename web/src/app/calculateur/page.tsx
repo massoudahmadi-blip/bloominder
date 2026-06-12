@@ -6,6 +6,8 @@ import { useI18n } from '@/lib/i18n';
 import { SubNav } from '@/components/SubNav';
 import { usePageTitle } from '@/lib/useTitle';
 import { exportCalculatorXlsx } from '@/lib/excel';
+import { AreaChart, CashflowBars } from '@/components/Charts';
+import { useBrandColor } from '@/lib/useBrandColor';
 
 function irr(cfs: number[]): number | null {
   const npv = (rate: number) => cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + rate, i), 0);
@@ -147,6 +149,7 @@ const SENS_APPRECS = [0, 1, 2, 3];
 export default function CalculatorPage() {
   const { t, locale } = useI18n();
   usePageTitle(t.calculator);
+  const brand = useBrandColor();
 
   // Acquisition
   const [price, setPrice] = useState(150000);
@@ -387,6 +390,18 @@ export default function CalculatorPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Projection charts */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.chartEquity}</h2>
+            <AreaChart data={sim.schedule.map((s) => ({ label: String(s.year), value: Math.round(price * Math.pow(1 + appreciation / 100, s.year) - s.balance) }))} unit=" €" color={brand} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-panel">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.chartCashflow}</h2>
+            <CashflowBars data={sim.schedule.map((s) => ({ label: String(s.year), value: Math.round(s.cashflow - (s.year === holdYears ? sim.exitProceeds : 0)) }))} />
           </div>
         </div>
       </main>

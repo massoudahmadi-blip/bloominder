@@ -75,6 +75,33 @@ export function BarChart({ data, color = BRAND }: { data: { label: string; value
   );
 }
 
+/** Annual cashflow bars with a zero baseline (green up / red down). */
+export function CashflowBars({ data }: { data: { label: string; value: number }[] }) {
+  if (!data.length) return <Empty />;
+  const W = 520, H = 190, pad = 22;
+  const half = (H - pad * 2) / 2;
+  const max = Math.max(1, ...data.map((d) => Math.abs(d.value)));
+  const bw = (W - pad * 2) / data.length;
+  const zero = pad + half;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      <line x1={pad} y1={zero} x2={W - pad} y2={zero} stroke="#e2e8f0" strokeWidth={1} />
+      {data.map((d, i) => {
+        const h = (Math.abs(d.value) / max) * half;
+        const bx = pad + i * bw;
+        const up = d.value >= 0;
+        return (
+          <g key={d.label}>
+            <rect x={bx + bw * 0.18} y={up ? zero - h : zero} width={bw * 0.64} height={h} rx={2}
+              fill={up ? '#10b981' : '#ef4444'} opacity={0.85} />
+            <text x={bx + bw / 2} y={H - 6} textAnchor="middle" className="fill-slate-400" fontSize={9}>{d.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 /** Donut with legend (e.g. sales share by property type). */
 export function Donut({ data }: { data: { label: string; value: number }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0);
