@@ -58,6 +58,13 @@ def main():
     a = ap.parse_args()
 
     rows = fetch_all(a.base, a.dataset)
+
+    # The dataset spans several years — keep only the most recent.
+    years = [int(r["annee"]) for r in rows if str(r.get("annee", "")).isdigit()]
+    latest = max(years) if years else 0
+    rows = [r for r in rows if str(r.get("annee")) == str(latest)]
+    sys.stderr.write(f"  keeping {len(rows)} rows for year {latest}\n")
+
     zones = {}   # id_zone -> (name, geojson)
     for rec in rows:
         zid = rec.get("id_zone")
