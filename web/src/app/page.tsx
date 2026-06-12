@@ -14,6 +14,7 @@ export default function Home() {
   const [filters, setFilters] = useState<Filters>({ type: 'all' });
   const [bbox, setBbox] = useState<BBox | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Sale | null>(null);
   const [focus, setFocus] = useState<{ lon: number; lat: number; key: number } | null>(null);
 
@@ -32,10 +33,12 @@ export default function Home() {
   useEffect(() => {
     if (!bbox) return;
     let cancelled = false;
+    setLoading(true);
     const h = setTimeout(() => {
       getSalesInView(bbox, filters)
         .then((res) => !cancelled && setSales(res))
-        .catch(() => !cancelled && setSales([]));
+        .catch(() => !cancelled && setSales([]))
+        .finally(() => !cancelled && setLoading(false));
     }, 250);
     return () => {
       cancelled = true;
@@ -81,6 +84,21 @@ export default function Home() {
           </svg>
           {t.nearMe}
         </button>
+
+        {/* Visible-sales count / loading */}
+        <div className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/95 px-3.5 py-1.5 text-xs font-medium text-slate-600 shadow-panel backdrop-blur">
+          {loading ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M12 3a9 9 0 1 0 9 9" strokeLinecap="round" />
+              </svg>
+              {t.mapLoading}
+            </>
+          ) : (
+            <><span className="font-semibold text-slate-900">{sales.length.toLocaleString('fr-FR')}</span> {t.mapSales}</>
+          )}
+        </div>
+
         <PropertyPanel sale={selected} onClose={() => setSelected(null)} />
       </main>
     </div>
