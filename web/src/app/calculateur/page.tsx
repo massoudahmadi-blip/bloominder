@@ -22,6 +22,7 @@ function irr(cfs: number[]): number | null {
 type SimInput = {
   price: number; notairePct: number; works: number; furnishing: number; rent: number;
   taxe: number; copro: number; mgmtPct: number; insurance: number; vacancyPct: number;
+  loanInsPct: number; capexPct: number;
   down: number; rate: number; term: number; holdYears: number; rentGrowth: number;
   appreciation: number; sellCosts: number; tmi: number; regime: 'nu' | 'lmnp';
 };
@@ -30,7 +31,25 @@ export interface ScheduleRow {
   year: number; rent: number; interest: number; principal: number; balance: number; tax: number; cashflow: number;
 }
 
-// Full investment simulation: yields, cashflow, banker ratios, amortization + IRR.
+// French capital-gains (plus-value immobilière) abatement schedules — secondary
+// residence. Income-tax (19%) exempt after 22y; social levies (17.2%) after 30y.
+function abatIR(y: number): number { return y <= 5 ? 0 : y >= 22 ? 100 : 6 * (y - 5); }
+function abatSocial(y: number): number {
+  if (y <= 5) return 0;
+  if (y >= 30) return 100;
+  if (y <= 21) return 1.65 * (y - 5);
+  return y === 22 ? 28 : 28 + 9 * (y - 22);
+}
+// Surtaxe on high taxable IR gains (>50k), simplified flat-on-total bands.
+function surtaxePV(g: number): number {
+  if (g <= 50000) return 0;
+  const r = g <= 100000 ? 0.02 : g <= 150000 ? 0.03 : g <= 200000 ? 0.04 : g <= 250000 ? 0.05 : 0.06;
+  return g * r;
+}
+
+// Full investment simulation: yields, cashflow, banker ratios, amortization,
+// IRR, capital-gains tax on exit (incl. LMNP amortization reintegration), and
+// the minimum holding period to break even.
 function simulate(p: SimInput) {
   const notaire = p.price * (p.notairePct / 100);
   const total = p.price + notaire + p.works + p.furnishing;
@@ -38,54 +57,87 @@ function simulate(p: SimInput) {
   const mr = p.rate / 100 / 12;
   const n = p.term * 12;
   const payment = loan <= 0 ? 0 : mr === 0 ? loan / n : (loan * mr) / (1 - Math.pow(1 + mr, -n));
-  const monthlyCharges = p.taxe / 12 + p.copro + p.rent * (p.mgmtPct / 100) + p.insurance + p.rent * (p.vacancyPct / 100);
-  const netOpsM = p.rent - monthlyCharges;
-  const cashflowM = netOpsM - payment;
+  const loanInsM = loan * (p.loanInsPct / 100) / 12;   // assurance emprunteur (on initial capital)
+  const capexM = p.price * (p.capexPct / 100) / 12;    // provision travaux / CapEx reserve
+  const debtServiceM = payment + loanInsM;
+  const opCostM = p.taxe / 12 + p.copro + p.rent * (p.mgmtPct / 100) + p.insurance + p.rent * (p.vacancyPct / 100) + capexM;
+  const monthlyCharges = opCostM;
+  const netOpsM = p.rent - opCostM;
+  const cashflowM = netOpsM - debtServiceM;
   const grossYield = total > 0 ? (p.rent * 12) / total * 100 : 0;
   const netYield = total > 0 ? (netOpsM * 12) / total * 100 : 0;
   const coc = p.down > 0 ? (cashflowM * 12) / p.down * 100 : 0;
-  // Banker ratios.
-  const dscr = payment > 0 ? (netOpsM * 12) / (payment * 12) : null;
-  const fixedOutflowM = p.taxe / 12 + p.copro + p.insurance + p.rent * (p.mgmtPct / 100) + payment;
+  const dscr = debtServiceM > 0 ? (netOpsM * 12) / (debtServiceM * 12) : null;
+  const fixedOutflowM = p.taxe / 12 + p.copro + p.insurance + capexM + p.rent * (p.mgmtPct / 100) + debtServiceM;
   const breakEvenOcc = p.rent > 0 ? Math.min(150, (fixedOutflowM / p.rent) * 100) : null;
 
-  const abatement = p.regime === 'lmnp' ? 0.5 : 0.3;
+  const abatement = p.regime === 'lmnp' ? 0.5 : 0.3; // micro income-tax allowance during holding
   const taxRate = p.tmi / 100 + 0.172;
-  const annualPayment = payment * 12;
-  const cfs: number[] = [-p.down];
+  const acquisition = p.price + notaire + p.works;
+  const depreciableBase = p.price * 0.85; // building portion (land ~15% non-depreciable)
+
+  // Capital-gains tax if sold at year y.
+  const plusValue = (y: number) => {
+    const saleNet = p.price * Math.pow(1 + p.appreciation / 100, y) * (1 - p.sellCosts / 100);
+    let base = Math.max(0, saleNet - acquisition);
+    if (p.regime === 'lmnp') base += depreciableBase * Math.min(y, 30) / 30; // LF2025: amortization reintegrated
+    const taxableIR = base * (1 - abatIR(y) / 100);
+    const taxableSoc = base * (1 - abatSocial(y) / 100);
+    const tax = Math.max(0, taxableIR * 0.19 + taxableSoc * 0.172 + surtaxePV(taxableIR));
+    return { saleNet, tax };
+  };
+
+  // Operating cashflow per year (after income tax, insurance, CapEx) up to a
+  // 30-year horizon, so we can scan for the break-even holding period.
+  const HORIZON = Math.max(p.holdYears, 30);
+  const op: number[] = []; const balAt: number[] = [];
   const schedule: ScheduleRow[] = [];
   let rentM = p.rent;
   let bal = loan;
-  for (let y = 1; y <= p.holdYears; y++) {
+  for (let y = 1; y <= HORIZON; y++) {
     let interestY = 0, principalY = 0;
     for (let m = 0; m < 12; m++) {
       const interest = bal * mr;
-      const princ = Math.min(bal, payment - interest);
+      const princ = Math.min(bal, Math.max(0, payment - interest));
       interestY += interest; principalY += princ; bal = Math.max(0, bal - princ);
     }
     const annualRent = rentM * 12;
-    const noi = annualRent - monthlyCharges * 12;
-    const tax = Math.max(0, annualRent * (1 - abatement)) * taxRate;
-    let cf = noi - annualPayment - tax;
-    if (y === p.holdYears) {
-      const saleNet = p.price * Math.pow(1 + p.appreciation / 100, p.holdYears) * (1 - p.sellCosts / 100);
-      cf += saleNet - bal;
+    const incomeTax = Math.max(0, annualRent * (1 - abatement)) * taxRate;
+    const opCF = annualRent - opCostM * 12 - payment * 12 - loanInsM * 12 - incomeTax;
+    op[y] = opCF; balAt[y] = bal;
+    if (y <= p.holdYears) {
+      const exit = y === p.holdYears ? plusValue(y).saleNet - bal - plusValue(y).tax : 0;
+      schedule.push({
+        year: y, rent: Math.round(annualRent), interest: Math.round(interestY),
+        principal: Math.round(principalY), balance: Math.round(bal), tax: Math.round(incomeTax),
+        cashflow: Math.round(opCF + exit),
+      });
     }
-    cfs.push(cf);
-    schedule.push({
-      year: y, rent: Math.round(annualRent), interest: Math.round(interestY),
-      principal: Math.round(principalY), balance: Math.round(bal), tax: Math.round(tax), cashflow: Math.round(cf),
-    });
     rentM *= 1 + p.rentGrowth / 100;
   }
+
+  const pvH = plusValue(p.holdYears);
+  const exitProceeds = pvH.saleNet - balAt[p.holdYears] - pvH.tax;
+  const cfs: number[] = [-p.down];
+  for (let y = 1; y <= p.holdYears; y++) cfs.push(op[y] + (y === p.holdYears ? exitProceeds : 0));
   const irrDec = irr(cfs);
-  const exitValue = p.price * Math.pow(1 + p.appreciation / 100, p.holdYears);
   const totalProfit = cfs.reduce((s, c) => s + c, 0);
-  const y1Tax = Math.max(0, p.rent * 12 * (1 - abatement)) * taxRate;
-  const netCfM = (p.rent * 12 - monthlyCharges * 12 - annualPayment - y1Tax) / 12;
+
+  // Minimum years to break even (recoup the cash invested), scanning up to 30y.
+  let breakEvenYears: number | null = null;
+  let cum = -p.down;
+  for (let y = 1; y <= HORIZON; y++) {
+    cum += op[y];
+    const pv = plusValue(y);
+    if (cum + pv.saleNet - balAt[y] - pv.tax >= 0) { breakEvenYears = y; break; }
+  }
+
+  const exitValue = p.price * Math.pow(1 + p.appreciation / 100, p.holdYears);
+  const netCfM = op[1] / 12;
   return {
-    notaire, total, loan, payment, monthlyCharges, cashflowM, grossYield, netYield, coc,
-    dscr, breakEvenOcc, irrPct: irrDec != null ? irrDec * 100 : null, exitValue, totalProfit, netCfM, schedule,
+    notaire, total, loan, payment, loanInsM, capexM, monthlyCharges, cashflowM, grossYield, netYield, coc,
+    dscr, breakEvenOcc, irrPct: irrDec != null ? irrDec * 100 : null,
+    exitValue, exitProceeds, plusValueTax: pvH.tax, breakEvenYears, totalProfit, netCfM, schedule,
   };
 }
 
@@ -109,10 +161,12 @@ export default function CalculatorPage() {
   const [mgmtPct, setMgmtPct] = useState(7);
   const [insurance, setInsurance] = useState(30);
   const [vacancyPct, setVacancyPct] = useState(5);
+  const [capexPct, setCapexPct] = useState(0.5);
   // Financing
   const [down, setDown] = useState(30000);
   const [rate, setRate] = useState(3.5);
   const [term, setTerm] = useState(20);
+  const [loanInsPct, setLoanInsPct] = useState(0.34);
   // Projection & tax
   const [holdYears, setHoldYears] = useState(10);
   const [rentGrowth, setRentGrowth] = useState(1.5);
@@ -132,7 +186,7 @@ export default function CalculatorPage() {
 
   const input: SimInput = {
     price, notairePct, works, furnishing, rent, taxe, copro, mgmtPct, insurance,
-    vacancyPct, down, rate, term, holdYears, rentGrowth, appreciation, sellCosts, tmi, regime,
+    vacancyPct, capexPct, loanInsPct, down, rate, term, holdYears, rentGrowth, appreciation, sellCosts, tmi, regime,
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sim = useMemo(() => simulate(input), Object.values(input));
@@ -212,11 +266,13 @@ export default function CalculatorPage() {
               <Num label={t.fMgmt} value={mgmtPct} onChange={setMgmtPct} suffix="%" step={0.5} />
               <Num label={t.fInsurance} value={insurance} onChange={setInsurance} suffix="€" />
               <Num label={t.fVacancy} value={vacancyPct} onChange={setVacancyPct} suffix="%" step={0.5} />
+              <Num label={t.fCapex} value={capexPct} onChange={setCapexPct} suffix="%" step={0.1} />
             </Section>
             <Section title={t.secFinancing}>
               <Num label={t.fDown} value={down} onChange={setDown} suffix="€" />
               <Num label={t.fRate} value={rate} onChange={setRate} suffix="%" step={0.1} />
               <Num label={t.fTerm} value={term} onChange={setTerm} suffix="ans" />
+              <Num label={t.fLoanIns} value={loanInsPct} onChange={setLoanInsPct} suffix="%" step={0.01} />
             </Section>
             <Section title={t.secProjection}>
               <Num label={t.fHolding} value={holdYears} onChange={setHoldYears} suffix="ans" />
@@ -273,8 +329,17 @@ export default function CalculatorPage() {
                 </span>
               </div>
               <Row label={t.rExitValue} value={formatEUR(Math.round(proj.exitValue), locale)} />
+              <Row label={t.rPlusValueTax} value={`− ${formatEUR(Math.round(sim.plusValueTax), locale)}`} />
+              <Row label={t.rExitNet} value={formatEUR(Math.round(sim.exitProceeds), locale)} />
               <Row label={t.rTotalProfit} value={formatEUR(Math.round(proj.totalProfit), locale)} strong />
               <Row label={`${t.rIRR} · ${holdYears}a`} value={proj.irrPct != null ? `${proj.irrPct.toFixed(1)}%` : '—'} strong />
+              <div className="mt-2 flex items-center justify-between rounded-xl px-3 py-2"
+                style={{ background: sim.breakEvenYears != null && sim.breakEvenYears <= holdYears ? '#ecfdf5' : '#fff7ed' }}>
+                <span className="text-slate-600">{t.rBreakEvenYears}</span>
+                <span className="text-base font-bold" style={{ color: sim.breakEvenYears != null && sim.breakEvenYears <= holdYears ? '#059669' : '#ea580c' }}>
+                  {sim.breakEvenYears != null ? `${sim.breakEvenYears} ${t.yearsUnit}` : `> 30 ${t.yearsUnit}`}
+                </span>
+              </div>
             </div>
 
             <button

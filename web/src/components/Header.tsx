@@ -27,6 +27,7 @@ export function Header({ onLocate }: { onLocate: (s: AddressSuggestion) => void 
         <a href="/screener" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.markets}</a>
         <a href="/stats" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.navStats}</a>
         <a href="/calculateur" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.calculator}</a>
+        <a href="/capacite" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.navCanIBuy}</a>
         <a href="/estimation" className="rounded-lg px-3 py-1.5 font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800">{t.navEstimate}</a>
       </nav>
 
