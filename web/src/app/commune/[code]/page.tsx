@@ -10,6 +10,7 @@ import { ScoreDial } from '@/components/ScoreDial';
 import { EnergyBadge } from '@/components/EnergyBadge';
 import { SubNav } from '@/components/SubNav';
 import { usePageTitle } from '@/lib/useTitle';
+import { RiskScorecard } from '@/components/RiskScorecard';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -116,6 +117,19 @@ export default function CommunePage() {
               <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </section>
+
+            {/* Risk scorecard */}
+            <div className="mt-4">
+              <RiskScorecard
+                daysToSell={m.median_days_to_sell ?? null}
+                passoirePct={data.dpe?.pct_passoire ?? null}
+                seveso={data.risk?.seveso_count ?? null}
+                risksText={data.risk?.risks ?? null}
+                priceM2Appt={m.median_prix_m2_appartement ?? null}
+                income={data.demo?.median_income ?? null}
+                growth1y={m.prix_m2_growth_1y ?? null}
+              />
+            </div>
 
             {/* France-vs-area benchmark */}
             {m.median_prix_m2 != null && (data.benchmark.dept != null || data.benchmark.fr != null) && (

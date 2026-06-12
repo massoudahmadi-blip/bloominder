@@ -12,6 +12,7 @@ import { MiniMap } from '@/components/MiniMap';
 import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
 import { estimateValue } from '@/lib/avm';
 import { usePageTitle } from '@/lib/useTitle';
+import { RiskScorecard } from '@/components/RiskScorecard';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -157,6 +158,21 @@ export default function AdressePage() {
                   <span className="text-slate-400">{n} {t.basedOn}</span>
                 </div>
               </section>
+            </div>
+
+            {/* Risk scorecard */}
+            <div className="mt-4">
+              <RiskScorecard
+                salePrice={seed.prix ?? null}
+                estimate={value}
+                daysToSell={m?.median_days_to_sell ?? null}
+                dpe={seed.dpe ?? null}
+                seveso={city?.risk?.seveso_count ?? null}
+                risksText={city?.risk?.risks ?? null}
+                priceM2Appt={m?.median_prix_m2_appartement ?? null}
+                income={city?.demo?.median_income ?? null}
+                growth1y={m?.prix_m2_growth_1y ?? null}
+              />
             </div>
 
             {/* Position */}
