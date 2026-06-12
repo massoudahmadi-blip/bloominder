@@ -27,5 +27,6 @@ python3 "$HERE/raw/fetch_rent_control.py" --out "$OUT"
 echo ">> Loading into Postgres..."
 psql -f "/data/$(basename "$OUT")" >/dev/null
 
-echo ">> Done. Reference rows per city:"
-psql -c "SELECT city, count(DISTINCT zone_id) AS zones, count(*) AS refs FROM rent_control_ref GROUP BY city;"
+echo ">> Done."
+psql -c "SELECT city, count(*) AS quartiers FROM rent_control_zone GROUP BY city;"
+psql -c "SELECT city, count(DISTINCT zone_ref) AS secteurs, count(*) AS refs FROM rent_control_ref GROUP BY city;"
