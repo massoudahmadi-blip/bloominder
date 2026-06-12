@@ -1,0 +1,60 @@
+name: Deploy to VPS
+
+# Deploys Bloominder to the IONOS VPS on every push to main.
+# Use the "Run workflow" button (workflow_dispatch) to deploy manually and
+# optionally rerun compute_metrics.sh (e.g. after a schema/metrics change).
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST     - server hostname or IP (e.g. bloominder.com or the raw IP)
+#   VPS_USER     - SSH user that owns ~/bloominder and is in the docker group
+#   VPS_SSH_KEY  - the PRIVATE deploy key (whose public half is in the
+#                  server user's ~/.ssh/authorized_keys)
+#   VPS_PORT     - optional; SSH port (defaults to 22)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      run_compute:
+        description: 'Also run compute_metrics.sh after deploy'
+        type: boolean
+        default: false
+
+# Never run two deploys at once; cancel an older queued one.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          PORT="${{ secrets.VPS_PORT }}"; PORT="${PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH_PORT=$PORT" >> "$GITHUB_ENV"
+
+      - name: Deploy (pull + rebuild)
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/deploy_key \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'set -e; cd ~/bloominder && git pull --ff-only && cd infra && docker compose --profile prod up -d --build && docker image prune -f'
+
+      - name: Recompute metrics (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.run_compute
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/deploy_key \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'set -e; cd ~/bloominder/infra && ./compute_metrics.sh'
+
+      - name: Cleanup key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
