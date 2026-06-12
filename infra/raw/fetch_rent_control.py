@@ -14,15 +14,15 @@ import json
 import sys
 import urllib.request
 
-FIELDS = "annee,id_zone,nom_quartier,piece,epoque,meuble_txt,ref,max,min,ville,geo_shape"
-
-
 def fetch_all(base: str, dataset: str):
+    # No `select`: "max"/"min" are reserved keywords in the API query language
+    # and 400 if used as field names. The default response returns all fields
+    # (incl. geo_shape) anyway.
     rows = []
     offset = 0
     while True:
         url = (f"{base}/api/explore/v2.1/catalog/datasets/{dataset}/records"
-               f"?select={FIELDS}&limit=100&offset={offset}")
+               f"?limit=100&offset={offset}")
         with urllib.request.urlopen(url, timeout=60) as r:
             data = json.load(r)
         results = data.get("results", [])
