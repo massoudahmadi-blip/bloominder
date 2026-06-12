@@ -3,7 +3,7 @@
 import { useI18n } from '@/lib/i18n';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
-type Tab = 'map' | 'markets' | 'stats' | 'calculator' | 'capacity' | 'estimate' | 'methodo';
+type Tab = 'map' | 'carte' | 'markets' | 'stats' | 'calculator' | 'capacity' | 'estimate' | 'methodo';
 
 const LOGO = (
   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -17,6 +17,7 @@ export function SubNav({ active }: { active: Tab }) {
 
   const links: { tab: Tab; href: string; label: string }[] = [
     { tab: 'map', href: '/', label: t.mapTab },
+    { tab: 'carte', href: '/carte', label: t.choroNav },
     { tab: 'markets', href: '/screener', label: t.markets },
     { tab: 'stats', href: '/stats', label: t.navStats },
     { tab: 'calculator', href: '/calculateur', label: t.calculator },

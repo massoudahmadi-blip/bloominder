@@ -92,6 +92,21 @@ export async function getRentControl(lat: number, lon: number, rooms?: number | 
   }
 }
 
+export interface ChoroPoint { code: string; value: number }
+
+/** Choropleth values by département/région for price (€/m²) or rent (€/m²/mo). */
+export async function getChoropleth(level: 'dept' | 'region', metric: 'price' | 'rent'): Promise<ChoroPoint[]> {
+  if (USING_MOCK) return [];
+  try {
+    const res = await fetch(`${API}/api/choropleth?level=${level}&metric=${metric}`);
+    if (!res.ok) return [];
+    const d = await res.json();
+    return d.values ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getTrend(codeCommune?: string, type?: string | null): Promise<YearTrend[]> {
   if (USING_MOCK) return mockTrend(codeCommune, type);
   if (!codeCommune) return [];
