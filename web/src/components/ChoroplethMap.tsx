@@ -8,6 +8,7 @@ import { getChoropleth, ChoroPoint } from '@/lib/api';
 
 const STYLE: any = {
   version: 8,
+  glyphs: 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
   sources: { base: { type: 'raster', tiles: ['https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png', 'https://b.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap, © CARTO' } },
   layers: [{ id: 'base', type: 'raster', source: 'base' }],
 };
@@ -28,8 +29,8 @@ function quantiles(vals: number[], n: number): number[] {
   return Array.from({ length: n }, (_, i) => a[Math.min(a.length - 1, Math.floor((i / (n - 1)) * (a.length - 1)))]);
 }
 
-export function ChoroplethMap({ level, metric, locale, unit }: {
-  level: 'dept' | 'region'; metric: 'price' | 'rent'; locale: string; unit: string;
+export function ChoroplethMap({ level, metric, ptype, locale, unit }: {
+  level: 'dept' | 'region'; metric: 'price' | 'rent'; ptype: 'maison' | 'appartement'; locale: string; unit: string;
 }) {
   const router = useRouter();
   const geoCache = useRef<Record<string, any>>({});
@@ -51,8 +52,10 @@ export function ChoroplethMap({ level, metric, locale, unit }: {
   }, [level]);
 
   useEffect(() => {
-    getChoropleth(level, metric).then(setValues).catch(() => setValues([]));
-  }, [level, metric]);
+    getChoropleth(level, metric, ptype).then(setValues).catch(() => setValues([]));
+  }, [level, metric, ptype]);
+
+  const fmtLabel = (v: number) => (metric === 'rent' ? v.toFixed(1).replace('.', ',') : v.toLocaleString('fr-FR'));
 
   const { data, breaks } = useMemo(() => {
     if (!geo) return { data: null as any, breaks: [] as number[] };
@@ -60,11 +63,12 @@ export function ChoroplethMap({ level, metric, locale, unit }: {
     const features = geo.features.map((f: any) => {
       const code = f.properties.code;
       const value = map.get(code);
-      return { ...f, properties: { ...f.properties, value: value ?? null } };
+      return { ...f, properties: { ...f.properties, value: value ?? null, label: value != null ? fmtLabel(value) : '' } };
     });
     const bk = quantiles(values.map((v) => v.value), 5);
     return { data: { ...geo, features }, breaks: bk };
-  }, [geo, values]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geo, values, metric]);
 
   const fillColor = useMemo(() => {
     const pal = PALETTE[metric];
@@ -89,10 +93,10 @@ export function ChoroplethMap({ level, metric, locale, unit }: {
   return (
     <div className="relative h-full w-full">
       <MapGL
-        initialViewState={{ longitude: 2.55, latitude: 46.6, zoom: 5 }}
+        initialViewState={{ longitude: 2.4, latitude: 46.7, zoom: 4.55 }}
         mapStyle={STYLE}
         maxBounds={FRANCE_BOUNDS}
-        minZoom={4.5}
+        minZoom={4.3}
         interactiveLayerIds={data ? ['choro-fill'] : []}
         onMouseMove={onMove}
         onMouseLeave={() => setHovered(null)}
@@ -104,6 +108,9 @@ export function ChoroplethMap({ level, metric, locale, unit }: {
           <Source id="choro" type="geojson" data={data}>
             <Layer id="choro-fill" type="fill" paint={{ 'fill-color': fillColor, 'fill-opacity': 0.8 }} />
             <Layer id="choro-line" type="line" paint={{ 'line-color': '#ffffff', 'line-width': 0.8 }} />
+            <Layer id="choro-label" type="symbol"
+              layout={{ 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': level === 'region' ? 13 : 10, 'text-allow-overlap': false }}
+              paint={{ 'text-color': '#0f172a', 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 }} />
           </Source>
         )}
         {hovered && (

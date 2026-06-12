@@ -11,6 +11,7 @@ export default function CartePage() {
   usePageTitle(t.choroTitle);
   const [level, setLevel] = useState<'dept' | 'region'>('dept');
   const [metric, setMetric] = useState<'price' | 'rent'>('price');
+  const [ptype, setPtype] = useState<'maison' | 'appartement'>('appartement');
 
   const unit = metric === 'price' ? '€/m²' : `€/m²${t.xlsPerMonth}`;
 
@@ -21,12 +22,14 @@ export default function CartePage() {
         <span className="text-sm font-semibold text-slate-700">{t.choroTitle}</span>
         <Toggle value={metric} onChange={(v) => setMetric(v as 'price' | 'rent')}
           options={[['price', t.choroPrice], ['rent', t.choroRent]]} />
+        <Toggle value={ptype} onChange={(v) => setPtype(v as 'maison' | 'appartement')}
+          options={[['appartement', t.choroAppt], ['maison', t.choroMaison]]} />
         <Toggle value={level} onChange={(v) => setLevel(v as 'dept' | 'region')}
           options={[['dept', t.choroDept], ['region', t.choroRegion]]} />
         <span className="ml-auto hidden text-xs text-slate-400 sm:block">{t.choroHint}</span>
       </div>
       <main className="relative min-h-0 flex-1">
-        <ChoroplethMap level={level} metric={metric} locale={locale} unit={unit} />
+        <ChoroplethMap level={level} metric={metric} ptype={ptype} locale={locale} unit={unit} />
       </main>
     </div>
   );

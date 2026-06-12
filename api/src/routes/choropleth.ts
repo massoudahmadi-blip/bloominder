@@ -32,29 +32,37 @@ export async function choroplethRoutes(app: FastifyInstance) {
   const Q = z.object({
     level: z.enum(['dept', 'region']).default('dept'),
     metric: z.enum(['price', 'rent']).default('price'),
+    ptype: z.enum(['maison', 'appartement']).default('appartement'),
   });
 
   app.get('/choropleth', async (req, reply) => {
     const parsed = Q.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ error: 'invalid query' });
-    const { level, metric } = parsed.data;
+    const { level, metric, ptype } = parsed.data;
 
     let deptVals: { code: string; value: number }[];
     if (metric === 'rent') {
+      // Rent €/m²/mo by department, from Carte des loyers.
+      const col = ptype === 'maison' ? 'loyer_m2_maison' : 'loyer_m2_appartement';
       deptVals = await query<{ code: string; value: number }>(
         `SELECT substr(code_commune,1,2) AS code,
-                round(percentile_cont(0.5) WITHIN GROUP (ORDER BY loyer_m2_appartement)::numeric, 1) AS value
-         FROM rents_commune WHERE loyer_m2_appartement IS NOT NULL
+                round(percentile_cont(0.5) WITHIN GROUP (ORDER BY ${col})::numeric, 1) AS value
+         FROM rents_commune WHERE ${col} IS NOT NULL
          GROUP BY 1`,
       ).catch(() => []);
     } else {
+      // Median sale €/m² by department, by property type.
+      const col = ptype === 'maison' ? 'median_prix_m2_maison' : 'median_prix_m2_appartement';
       deptVals = await query<{ code: string; value: number }>(
-        `SELECT code, median_prix_m2 AS value FROM benchmark WHERE scope='DEP' AND median_prix_m2 IS NOT NULL`,
+        `SELECT code_departement AS code,
+                round(percentile_cont(0.5) WITHIN GROUP (ORDER BY ${col})) AS value
+         FROM commune_metrics WHERE ${col} IS NOT NULL AND code_departement IS NOT NULL
+         GROUP BY code_departement`,
       ).catch(() => []);
     }
     deptVals = deptVals.map((d) => ({ code: d.code, value: Number(d.value) }));
 
-    if (level === 'dept') return { level, metric, values: deptVals };
+    if (level === 'dept') return { level, metric, ptype, values: deptVals };
 
     // Aggregate dept medians up to régions.
     const byRegion: Record<string, number[]> = {};
@@ -66,6 +74,6 @@ export async function choroplethRoutes(app: FastifyInstance) {
     const values = Object.entries(byRegion)
       .map(([code, vals]) => ({ code, value: median(vals) }))
       .filter((x) => x.value != null);
-    return { level, metric, values };
+    return { level, metric, ptype, values };
   });
 }

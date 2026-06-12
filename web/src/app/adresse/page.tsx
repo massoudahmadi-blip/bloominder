@@ -17,6 +17,7 @@ import { MarketTemperature } from '@/components/MarketTemperature';
 import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
 import { shortTermRule } from '@/lib/strRules';
 import { KpiStrip, KpiItem } from '@/components/KpiStrip';
+import { WorksSimulator } from '@/components/WorksSimulator';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
@@ -375,6 +376,11 @@ export default function AdressePage() {
                 </table>
               </section>
             )}
+
+            {/* Works & condition simulator */}
+            <div className="mt-4">
+              <WorksSimulator initialValue={value ?? seed.prix ?? null} locale={locale} />
+            </div>
 
             <p className="mt-4 text-[11px] text-slate-300">{t.estimateNote} · {t.dataSource}</p>
           </>

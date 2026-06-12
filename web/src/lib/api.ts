@@ -94,11 +94,11 @@ export async function getRentControl(lat: number, lon: number, rooms?: number | 
 
 export interface ChoroPoint { code: string; value: number }
 
-/** Choropleth values by département/région for price (€/m²) or rent (€/m²/mo). */
-export async function getChoropleth(level: 'dept' | 'region', metric: 'price' | 'rent'): Promise<ChoroPoint[]> {
+/** Choropleth values by département/région for price (€/m²) or rent (€/m²/mo), by type. */
+export async function getChoropleth(level: 'dept' | 'region', metric: 'price' | 'rent', ptype: 'maison' | 'appartement' = 'appartement'): Promise<ChoroPoint[]> {
   if (USING_MOCK) return [];
   try {
-    const res = await fetch(`${API}/api/choropleth?level=${level}&metric=${metric}`);
+    const res = await fetch(`${API}/api/choropleth?level=${level}&metric=${metric}&ptype=${ptype}`);
     if (!res.ok) return [];
     const d = await res.json();
     return d.values ?? [];

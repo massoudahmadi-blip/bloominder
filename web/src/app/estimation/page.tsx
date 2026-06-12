@@ -13,6 +13,7 @@ import { fetchParcelAt, ParcelFeature } from '@/lib/cadastre';
 import { exportEstimationXlsx } from '@/lib/excel';
 import { estimateValue } from '@/lib/avm';
 import { usePageTitle } from '@/lib/useTitle';
+import { WorksSimulator } from '@/components/WorksSimulator';
 
 export default function EstimationPage() {
   const { t, locale } = useI18n();
@@ -189,6 +190,8 @@ export default function EstimationPage() {
                 </table>
               </section>
             )}
+
+            <WorksSimulator initialValue={value} locale={locale} />
 
             <p className="text-[11px] text-slate-300">{t.estimateNote} · {t.dataSource}</p>
           </div>

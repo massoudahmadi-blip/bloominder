@@ -54,9 +54,11 @@ export default function ScreenerPage() {
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setDepts(Array.isArray(d) ? d : []))
       .catch(() => {});
-    // Pre-fill the €/m² budget from a "Puis-je acheter" deep-link (?maxm2=).
-    const v = new URLSearchParams(window.location.search).get('maxm2');
-    if (v) setMaxPriceM2(v);
+    // Deep-link params: ?dept= (from the choropleth drill-down), ?maxm2= (budget).
+    const sp = new URLSearchParams(window.location.search);
+    const dp = sp.get('dept'); if (dp) setDept(dp);
+    const v = sp.get('maxm2'); if (v) setMaxPriceM2(v);
+    const qq = sp.get('q'); if (qq) setQ(qq);
   }, []);
 
   useEffect(() => {
