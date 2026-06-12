@@ -15,6 +15,7 @@ import { MarketTemperature } from '@/components/MarketTemperature';
 import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
 import { shortTermRule } from '@/lib/strRules';
 import { KpiStrip, Tone } from '@/components/KpiStrip';
+import { PriceEvolutionChart } from '@/components/PriceEvolutionChart';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -132,6 +133,11 @@ export default function CommunePage() {
               <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
             </section>
+
+            {/* Price evolution */}
+            <div className="mt-4">
+              <PriceEvolutionChart code={m.code_commune} locale={locale} />
+            </div>
 
             {/* Market temperature */}
             <div className="mt-4">
