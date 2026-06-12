@@ -361,7 +361,7 @@ export default function AdressePage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {comps.slice(0, 12).map((c) => (
+                    {comps.slice(0, 15).map((c) => (
                       <tr key={c.id}>
                         <td className="px-2 py-1.5 text-slate-500">{formatDate(c.date, locale)}</td>
                         <td className="px-2 py-1.5">{c.type ? ((t as any)[c.type] ?? c.type) : '—'}</td>
