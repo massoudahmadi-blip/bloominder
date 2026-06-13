@@ -191,6 +191,12 @@ CREATE TABLE IF NOT EXISTS commune_demo (
   median_income     numeric,   -- niveau de vie médian (added later)
   updated_at        timestamptz DEFAULT now()
 );
+-- Housing structure + local economy (INSEE RP), added later.
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS owner_pct        numeric;  -- % owner-occupied (RP)
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS renter_pct       numeric;  -- % rented (RP)
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS vacancy_pct      numeric;  -- % vacant dwellings
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS secondary_pct    numeric;  -- % secondary/occasional
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS unemployment_pct numeric;  -- % unemployed 15-64 (RP)
 
 -- Per-commune energy profile of the housing stock.
 CREATE TABLE IF NOT EXISTS commune_dpe (

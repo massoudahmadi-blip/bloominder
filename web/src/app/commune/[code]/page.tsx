@@ -132,6 +132,9 @@ export default function CommunePage() {
               <Kpi label={t.kpiGrowth} value={m.prix_m2_growth_1y != null ? `${m.prix_m2_growth_1y > 0 ? '+' : ''}${m.prix_m2_growth_1y}%` : '—'} />
               <Kpi label={t.kpiTax} value={data.tax?.taux_tfb != null ? `${data.tax.taux_tfb}%` : '—'} />
               <Kpi label={t.kpiSales12m} value={m.ventes_12m != null ? String(m.ventes_12m) : '—'} />
+              {data.demo?.owner_pct != null && <Kpi label={t.kpiOwners} value={`${data.demo.owner_pct}%`} />}
+              {data.demo?.vacancy_pct != null && <Kpi label={t.kpiVacancy} value={`${data.demo.vacancy_pct}%`} />}
+              {data.demo?.unemployment_pct != null && <Kpi label={t.kpiUnemployment} value={`${data.demo.unemployment_pct}%`} />}
             </section>
 
             {/* Price evolution */}
