@@ -14,6 +14,10 @@ import { exportEstimationXlsx } from '@/lib/excel';
 import { estimateValue } from '@/lib/avm';
 import { usePageTitle } from '@/lib/useTitle';
 import { WorksSimulator } from '@/components/WorksSimulator';
+import { RiskScorecard } from '@/components/RiskScorecard';
+import { MarketTemperature } from '@/components/MarketTemperature';
+import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
+import { shortTermRule } from '@/lib/strRules';
 
 export default function EstimationPage() {
   const { t, locale } = useI18n();
@@ -161,6 +165,20 @@ export default function EstimationPage() {
                 {city?.risk?.risks && <p className="mt-3 text-xs text-slate-500">{t.risksTitle}: {city.risk.risks}</p>}
               </section>
             )}
+
+            {/* Risk scorecard + market temperature + rent rules */}
+            <RiskScorecard
+              estimate={value}
+              daysToSell={m?.median_days_to_sell ?? null}
+              seveso={city?.risk?.seveso_count ?? null}
+              risksText={city?.risk?.risks ?? null}
+              priceM2Appt={m?.median_prix_m2_appartement ?? null}
+              income={city?.demo?.median_income ?? null}
+              growth1y={m?.prix_m2_growth_1y ?? null}
+              strStrict={addr.citycode ? shortTermRule(addr.citycode, city?.demo?.population, city?.zone_tendue).tendue : null}
+            />
+            {m && <MarketTemperature growth1y={m.prix_m2_growth_1y ?? null} daysToSell={m.median_days_to_sell ?? null} />}
+            <ShortTermRentalNote code={addr.citycode} population={city?.demo?.population ?? null} zoneTendue={city?.zone_tendue} />
 
             {/* Comparables */}
             {comps.length > 0 && (
