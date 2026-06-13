@@ -166,8 +166,31 @@ export default function ScreenerPage() {
           </button>
         </div>
 
-        {/* Table */}
-        <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        {/* Mobile cards */}
+        <div className="mt-2 space-y-2 sm:hidden">
+          {loading && rows.length === 0
+            ? [...Array(6)].map((_, i) => <div key={i} className="h-16 animate-pulse rounded-2xl bg-white" />)
+            : rows.length === 0
+              ? <div className="rounded-2xl border border-slate-200 bg-white px-3 py-10 text-center text-slate-400">{t.noResults}</div>
+              : rows.map((r) => (
+                <button key={r.code_commune} onClick={() => router.push(`/commune/${r.code_commune}`)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:bg-slate-50">
+                  <ScoreBadge v={r.score_global} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-slate-800">{r.nom_commune} <span className="text-xs text-slate-400">{r.code_departement}</span></div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                      <span>{(r.median_prix_m2_12m ?? r.median_prix_m2) ? formatEUR((r.median_prix_m2_12m ?? r.median_prix_m2) as number, locale) : '—'}/m²</span>
+                      <span style={{ color: r.prix_m2_growth_1y != null && r.prix_m2_growth_1y < 0 ? '#ef4444' : '#10b981' }}>{pct(r.prix_m2_growth_1y, true)}</span>
+                      <span>{r.rendement_brut_appartement != null ? `${r.rendement_brut_appartement}% ${t.colYield.toLowerCase()}` : '—'}</span>
+                    </div>
+                  </div>
+                  <svg className="h-4 w-4 shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </button>
+              ))}
+        </div>
+
+        {/* Table (sm+) */}
+        <div className="mt-2 hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white sm:block">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wide text-slate-400">
               <tr>
