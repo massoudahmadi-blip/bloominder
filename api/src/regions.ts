@@ -1,0 +1,38 @@
+// INSEE régions ↔ départements, shared by the choropleth and stats endpoints.
+export const REGION_DEPTS: Record<string, string[]> = {
+  '84': ['01', '03', '07', '15', '26', '38', '42', '43', '63', '69', '73', '74'],
+  '27': ['21', '25', '39', '58', '70', '71', '89', '90'],
+  '53': ['22', '29', '35', '56'],
+  '24': ['18', '28', '36', '37', '41', '45'],
+  '94': ['2A', '2B'],
+  '44': ['08', '10', '51', '52', '54', '55', '57', '67', '68', '88'],
+  '32': ['02', '59', '60', '62', '80'],
+  '11': ['75', '77', '78', '91', '92', '93', '94', '95'],
+  '28': ['14', '27', '50', '61', '76'],
+  '75': ['16', '17', '19', '23', '24', '33', '40', '47', '64', '79', '86', '87'],
+  '76': ['09', '11', '12', '30', '31', '32', '34', '46', '48', '65', '66', '81', '82'],
+  '52': ['44', '49', '53', '72', '85'],
+  '93': ['04', '05', '06', '13', '83', '84'],
+  '01': ['971'], '02': ['972'], '03': ['973'], '04': ['974'], '06': ['976'],
+};
+
+export const REGIONS: { code: string; nom: string }[] = [
+  { code: '84', nom: 'Auvergne-Rhône-Alpes' },
+  { code: '27', nom: 'Bourgogne-Franche-Comté' },
+  { code: '53', nom: 'Bretagne' },
+  { code: '24', nom: 'Centre-Val de Loire' },
+  { code: '94', nom: 'Corse' },
+  { code: '44', nom: 'Grand Est' },
+  { code: '32', nom: 'Hauts-de-France' },
+  { code: '11', nom: 'Île-de-France' },
+  { code: '28', nom: 'Normandie' },
+  { code: '75', nom: 'Nouvelle-Aquitaine' },
+  { code: '76', nom: 'Occitanie' },
+  { code: '52', nom: 'Pays de la Loire' },
+  { code: '93', nom: "Provence-Alpes-Côte d'Azur" },
+  { code: '01', nom: 'Guadeloupe' },
+  { code: '02', nom: 'Martinique' },
+  { code: '03', nom: 'Guyane' },
+  { code: '04', nom: 'La Réunion' },
+  { code: '06', nom: 'Mayotte' },
+];

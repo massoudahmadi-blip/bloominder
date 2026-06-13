@@ -53,8 +53,10 @@ export function AreaChart({ data, unit = '', color = BRAND }: { data: { label: s
   );
 }
 
-/** Vertical bars (e.g. sales volume by year, seasonality). */
-export function BarChart({ data, color = BRAND }: { data: { label: string; value: number }[]; color?: string }) {
+/** Vertical bars (e.g. sales volume by year, seasonality). Bars clickable when onSelect set. */
+export function BarChart({ data, color = BRAND, onSelect, selected }: {
+  data: { label: string; value: number }[]; color?: string; onSelect?: (label: string) => void; selected?: string;
+}) {
   if (!data.length) return <Empty />;
   const W = 520, H = 200, pad = 28;
   const max = Math.max(...data.map((d) => d.value)) || 1;
@@ -64,10 +66,12 @@ export function BarChart({ data, color = BRAND }: { data: { label: string; value
       {data.map((d, i) => {
         const h = ((d.value / max) * (H - pad * 2));
         const bx = pad + i * bw;
+        const active = selected != null && d.label === selected;
         return (
-          <g key={d.label}>
-            <rect x={bx + bw * 0.18} y={H - pad - h} width={bw * 0.64} height={h} rx={3} fill={color} opacity={0.85} />
-            <text x={bx + bw / 2} y={H - 8} textAnchor="middle" className="fill-slate-400" fontSize={9}>{d.label}</text>
+          <g key={d.label} onClick={onSelect ? () => onSelect(d.label) : undefined} style={onSelect ? { cursor: 'pointer' } : undefined}>
+            <rect x={bx + bw * 0.18} y={H - pad - h} width={bw * 0.64} height={h} rx={3} fill={color} opacity={active ? 1 : selected != null ? 0.4 : 0.85} />
+            {onSelect && <rect x={bx} y={pad} width={bw} height={H - pad} fill="transparent" />}
+            <text x={bx + bw / 2} y={H - 8} textAnchor="middle" className={active ? 'fill-slate-900 font-semibold' : 'fill-slate-400'} fontSize={9}>{d.label}</text>
           </g>
         );
       })}

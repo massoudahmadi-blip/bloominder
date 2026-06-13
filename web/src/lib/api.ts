@@ -253,6 +253,41 @@ export async function getStats(): Promise<StatsData> {
   return res.json();
 }
 
+export interface StatsExplore {
+  byYear: StatsData['byYear'];
+  byType: StatsData['byType'];
+  byMonth: StatsData['byMonth'];
+  priceBands: StatsData['priceBands'];
+  byDept: StatsData['byDept'];
+  totals: { ventes: number; volume: number };
+}
+
+/** Interactive stats recomputed for a year/region/dept/commune scope. */
+export async function getStatsExplore(f: { year?: number; region?: string; dept?: string; commune?: string }): Promise<StatsExplore | null> {
+  if (USING_MOCK) return null;
+  const sp = new URLSearchParams();
+  if (f.year) sp.set('year', String(f.year));
+  if (f.commune) sp.set('commune', f.commune);
+  else if (f.dept) sp.set('dept', f.dept);
+  else if (f.region) sp.set('region', f.region);
+  try {
+    const res = await fetch(`${API}/api/stats/explore?${sp.toString()}`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    const num = (v: any) => (v == null ? null : Number(v));
+    return {
+      byYear: (d.byYear ?? []).map((r: any) => ({ annee: Number(r.annee), ventes: Number(r.ventes), volume: Number(r.volume), median_m2: num(r.median_m2) })),
+      byType: (d.byType ?? []).map((r: any) => ({ type: r.type, ventes: Number(r.ventes), median_m2: num(r.median_m2) })),
+      byMonth: (d.byMonth ?? []).map((r: any) => ({ mois: Number(r.mois), ventes: Number(r.ventes) })),
+      priceBands: (d.priceBands ?? []).map((r: any) => ({ ord: Number(r.ord), label: r.label, ventes: Number(r.ventes) })),
+      byDept: (d.byDept ?? []).map((r: any) => ({ dept: r.dept, ventes: Number(r.ventes), volume: 0, median_m2: num(r.median_m2) })),
+      totals: { ventes: Number(d.totals?.ventes || 0), volume: Number(d.totals?.volume || 0) },
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Latest transaction date (to default the map to the last 6 months of data). */
 export async function getMeta(): Promise<{ maxDate: string | null }> {
   if (USING_MOCK) return { maxDate: '2025-12-31' };
