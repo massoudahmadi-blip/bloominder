@@ -23,7 +23,7 @@ function filterParams(f: Filters): string {
 export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale[]> {
   if (USING_MOCK) return mockSalesInView(bbox, filters);
   const bb = `${bbox.minLon},${bbox.minLat},${bbox.maxLon},${bbox.maxLat}`;
-  const url = `${API}/api/map?bbox=${bb}&limit=2000&${filterParams(filters)}`;
+  const url = `${API}/api/map?bbox=${bb}&limit=5000&${filterParams(filters)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`map ${res.status}`);
   const fc = await res.json();
