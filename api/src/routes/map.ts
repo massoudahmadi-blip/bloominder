@@ -39,6 +39,28 @@ export async function mapRoutes(app: FastifyInstance) {
     if (q.landMin != null) { params.push(q.landMin); where.push(`surface_terrain >= $${params.length}`); }
     if (q.landMax != null) { params.push(q.landMax); where.push(`surface_terrain <= $${params.length}`); }
     if (q.dpe) { params.push(q.dpe); where.push(`td.etiquette_dpe = $${params.length}`); }
+    const dpeJoin = q.dpe ? 'LEFT JOIN transaction_dpe td ON td.transaction_id = t.id' : '';
+
+    // Broad viewport → grid-aggregate into clusters (true density everywhere,
+    // no truncation). Zoomed in → individual points (national zoom kept as
+    // points to avoid a full-table aggregate).
+    const span = Math.max(box[2] - box[0], box[3] - box[1]);
+    if (span > 0.3 && span < 6) {
+      const cell = span / 45;
+      const clusters = await query<{ lon: number; lat: number; n: number }>(
+        `SELECT avg(t.longitude) AS lon, avg(t.latitude) AS lat, count(*)::int AS n
+         FROM transactions t ${dpeJoin}
+         WHERE ${where.join(' AND ')} AND t.longitude IS NOT NULL
+         GROUP BY round((t.longitude / ${cell}))::int, round((t.latitude / ${cell}))::int
+         LIMIT 4000`,
+        params,
+      );
+      return {
+        aggregated: true,
+        clusters: clusters.map((c) => ({ lon: Number(c.lon), lat: Number(c.lat), count: c.n })),
+      };
+    }
+
     params.push(q.limit);
 
     const rows = await query<{
@@ -63,6 +85,7 @@ export async function mapRoutes(app: FastifyInstance) {
     );
 
     return {
+      aggregated: false,
       type: 'FeatureCollection',
       features: rows.map((r) => ({
         type: 'Feature',

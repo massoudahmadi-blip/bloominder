@@ -84,12 +84,16 @@ interface ClusterMarker {
 
 export function PropertyMap({
   sales,
+  serverClusters = [],
+  aggregated = false,
   selected,
   focus,
   onSelect,
   onViewChange,
 }: {
   sales: Sale[];
+  serverClusters?: { lon: number; lat: number; count: number }[];
+  aggregated?: boolean;
   selected: Sale | null;
   focus: { lon: number; lat: number; key: number } | null;
   onSelect: (s: Sale | null) => void;
@@ -101,6 +105,11 @@ export function PropertyMap({
   const mapStyle = useMemo(() => buildStyle(locale), [locale]);
   const brand = useBrandColor('600');
   const [clusters, setClusters] = useState<ClusterMarker[]>([]);
+  // When the API aggregates (broad view), render server clusters; else the
+  // client-side clusters of the individual points.
+  const displayClusters: ClusterMarker[] = aggregated
+    ? serverClusters.map((c, i) => ({ id: i, count: c.count, lon: c.lon, lat: c.lat }))
+    : clusters;
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
   const [hovered, setHovered] = useState<Sale | null>(null);
@@ -302,29 +311,34 @@ export function PropertyMap({
           </Source>
         )}
 
-        <Source id="sales" type="geojson" data={geojson} cluster clusterRadius={48} clusterMaxZoom={14}>
-          <Layer {...unclusteredLayer} />
-          <Layer {...selectedLayer} paint={{ ...selectedLayer.paint, 'circle-color': brand }} filter={['==', ['get', 'sid'], selected ? String(selected.id) : '']} />
-        </Source>
+        {!aggregated && (
+          <Source id="sales" type="geojson" data={geojson} cluster clusterRadius={48} clusterMaxZoom={14}>
+            <Layer {...unclusteredLayer} />
+            <Layer {...selectedLayer} paint={{ ...selectedLayer.paint, 'circle-color': brand }} filter={['==', ['get', 'sid'], selected ? String(selected.id) : '']} />
+          </Source>
+        )}
 
-        {clusters.map((c) => (
+        {displayClusters.map((c) => (
           <Marker key={c.id} longitude={c.lon} latitude={c.lat} anchor="center">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const src = mapRef.current?.getMap().getSource('sales') as GeoJSONSource | undefined;
-                src?.getClusterExpansionZoom(c.id).then((zoom) =>
-                  mapRef.current?.getMap().easeTo({ center: [c.lon, c.lat], zoom, duration: 600 }),
-                );
+                const map = mapRef.current?.getMap();
+                if (aggregated) {
+                  map?.easeTo({ center: [c.lon, c.lat], zoom: Math.min((map.getZoom() ?? 6) + 2, 14), duration: 600 });
+                } else {
+                  const src = map?.getSource('sales') as GeoJSONSource | undefined;
+                  src?.getClusterExpansionZoom(c.id).then((zoom) => map?.easeTo({ center: [c.lon, c.lat], zoom, duration: 600 }));
+                }
               }}
               className="grid place-items-center rounded-full border-2 border-white bg-brand-600/90 font-semibold text-white shadow-md transition hover:bg-brand-600"
               style={{
-                width: 34 + Math.min(c.count, 200) / 8,
-                height: 34 + Math.min(c.count, 200) / 8,
+                width: 34 + Math.min(c.count, 2000) / 60,
+                height: 34 + Math.min(c.count, 2000) / 60,
                 fontSize: 12,
               }}
             >
-              {c.count}
+              {c.count > 999 ? `${Math.round(c.count / 1000)}k` : c.count}
             </button>
           </Marker>
         ))}

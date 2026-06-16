@@ -19,15 +19,20 @@ function filterParams(f: Filters): string {
   return p.toString();
 }
 
-/** Sales inside the current map viewport (powers both map markers and the list). */
-export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale[]> {
-  if (USING_MOCK) return mockSalesInView(bbox, filters);
+export interface MapCluster { lon: number; lat: number; count: number }
+export interface MapView { aggregated: boolean; sales: Sale[]; clusters: MapCluster[] }
+
+/** Sales inside the current map viewport. Broad views return server-side
+ *  clusters (true density); zoomed-in views return individual sales. */
+export async function getSalesInView(bbox: BBox, filters: Filters): Promise<MapView> {
+  if (USING_MOCK) return { aggregated: false, sales: await mockSalesInView(bbox, filters), clusters: [] };
   const bb = `${bbox.minLon},${bbox.minLat},${bbox.maxLon},${bbox.maxLat}`;
   const url = `${API}/api/map?bbox=${bb}&limit=5000&${filterParams(filters)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`map ${res.status}`);
   const fc = await res.json();
-  return (fc.features ?? []).map((feat: any, i: number): Sale => ({
+  if (fc.aggregated) return { aggregated: true, sales: [], clusters: fc.clusters ?? [] };
+  const sales = (fc.features ?? []).map((feat: any, i: number): Sale => ({
     id: feat.properties.id ?? i,
     id_mutation: feat.properties.id_mutation,
     date: feat.properties.date,
@@ -46,6 +51,7 @@ export async function getSalesInView(bbox: BBox, filters: Filters): Promise<Sale
     longitude: feat.geometry.coordinates[0],
     latitude: feat.geometry.coordinates[1],
   }));
+  return { aggregated: false, sales, clusters: [] };
 }
 
 export async function getComparables(lat: number, lon: number, type?: string | null, months = 24): Promise<Sale[]> {

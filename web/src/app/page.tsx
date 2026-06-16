@@ -6,7 +6,7 @@ import { FilterBar } from '@/components/Filters';
 import { PropertyMap } from '@/components/PropertyMap';
 import { PropertyPanel } from '@/components/PropertyPanel';
 import { Sale, BBox, Filters } from '@/lib/types';
-import { getSalesInView, getMeta, USING_MOCK } from '@/lib/api';
+import { getSalesInView, getMeta, USING_MOCK, MapCluster } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 
 export default function Home() {
@@ -14,6 +14,8 @@ export default function Home() {
   const [filters, setFilters] = useState<Filters>({ type: 'all' });
   const [bbox, setBbox] = useState<BBox | null>(null);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [clusters, setClusters] = useState<MapCluster[]>([]);
+  const [aggregated, setAggregated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Sale | null>(null);
   const [focus, setFocus] = useState<{ lon: number; lat: number; key: number } | null>(null);
@@ -36,8 +38,8 @@ export default function Home() {
     setLoading(true);
     const h = setTimeout(() => {
       getSalesInView(bbox, filters)
-        .then((res) => !cancelled && setSales(res))
-        .catch(() => !cancelled && setSales([]))
+        .then((res) => { if (cancelled) return; setSales(res.sales); setClusters(res.clusters); setAggregated(res.aggregated); })
+        .catch(() => { if (!cancelled) { setSales([]); setClusters([]); setAggregated(false); } })
         .finally(() => !cancelled && setLoading(false));
     }, 250);
     return () => {
@@ -68,6 +70,8 @@ export default function Home() {
       <main className="relative min-h-0 flex-1">
         <PropertyMap
           sales={sales}
+          serverClusters={clusters}
+          aggregated={aggregated}
           selected={selected}
           focus={focus}
           onSelect={setSelected}
@@ -95,7 +99,7 @@ export default function Home() {
               {t.mapLoading}
             </>
           ) : (
-            <><span className="font-semibold text-slate-900">{sales.length.toLocaleString('fr-FR')}</span> {t.mapSales}</>
+            <><span className="font-semibold text-slate-900">{(aggregated ? clusters.reduce((s, c) => s + c.count, 0) : sales.length).toLocaleString('fr-FR')}</span> {t.mapSales}</>
           )}
         </div>
 
