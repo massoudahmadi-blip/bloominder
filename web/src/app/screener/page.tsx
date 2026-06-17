@@ -99,6 +99,19 @@ export default function ScreenerPage() {
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   };
 
+  const deptName = (c: string) => depts.find((d) => d.code === c)?.nom ?? c;
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [
+    ...(q ? [{ key: 'q', label: q, clear: () => setQ('') }] : []),
+    ...(dept ? [{ key: 'dept', label: `${dept} · ${deptName(dept)}`, clear: () => setDept('') }] : []),
+    ...(postal ? [{ key: 'postal', label: `${t.filterPostal} ${postal}`, clear: () => setPostal('') }] : []),
+    ...(minYield ? [{ key: 'minYield', label: `${t.filterMinYield} ≥ ${minYield}%`, clear: () => setMinYield('') }] : []),
+    ...(minScore ? [{ key: 'minScore', label: `${t.filterMinScore} ≥ ${minScore}`, clear: () => setMinScore('') }] : []),
+    ...(maxPriceM2 ? [{ key: 'maxPriceM2', label: `≤ ${Number(maxPriceM2).toLocaleString('fr-FR')} €/m²`, clear: () => setMaxPriceM2('') }] : []),
+  ];
+  const resetFilters = () => {
+    setQ(''); setDept(''); setPostal(''); setMinYield(''); setMinScore(''); setMaxPriceM2(''); setPage(1);
+  };
+
   const toggleSort = (col: ScreenerSort) => {
     if (sort === col) setDir(dir === 'desc' ? 'asc' : 'desc');
     else { setSort(col); setDir('desc'); }
@@ -154,6 +167,22 @@ export default function ScreenerPage() {
               placeholder="€/m²" className="w-28 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-100" />
           </Field>
         </div>
+
+        {/* Active filter chips */}
+        {activeFilters.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {activeFilters.map((f) => (
+              <button key={f.key} onClick={() => { f.clear(); setPage(1); }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 transition hover:bg-brand-100">
+                {f.label}
+                <span aria-hidden className="text-brand-400">✕</span>
+              </button>
+            ))}
+            <button onClick={resetFilters} className="text-xs font-medium text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline">
+              {t.resetFilters}
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 flex items-center justify-between">
           <span className="text-sm text-slate-500">{total.toLocaleString(locale === 'fr' ? 'fr-FR' : 'en-GB')} {t.screenerResults}</span>

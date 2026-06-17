@@ -16,6 +16,7 @@ import { ShortTermRentalNote } from '@/components/ShortTermRentalNote';
 import { shortTermRule } from '@/lib/strRules';
 import { KpiStrip, Tone } from '@/components/KpiStrip';
 import { PriceEvolutionChart } from '@/components/PriceEvolutionChart';
+import { InvestorVerdict } from '@/components/InvestorVerdict';
 
 const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b',
@@ -98,8 +99,23 @@ export default function CommunePage() {
               </div>
             </div>
 
-            {/* Executive summary */}
+            {/* Investor verdict */}
             <div className="mt-5">
+              <InvestorVerdict
+                score={s?.score_global ?? null}
+                yieldPct={m.rendement_brut_appartement ?? null}
+                growth1y={m.prix_m2_growth_1y ?? null}
+                daysToSell={m.median_days_to_sell ?? null}
+                passoirePct={data.dpe?.pct_passoire ?? null}
+                priceM2={m.median_prix_m2_appartement ?? m.median_prix_m2 ?? null}
+                income={data.demo?.median_income ?? null}
+                sales12m={m.ventes_12m ?? null}
+                zoneTendue={data.zone_tendue}
+              />
+            </div>
+
+            {/* Executive summary */}
+            <div className="mt-4">
               <KpiStrip items={[
                 ...(s?.score_global != null ? [{ label: t.scoreGlobalLbl, value: String(Math.round(s.score_global)), tone: 'brand' as Tone }] : []),
                 ...((m.median_prix_m2_12m ?? m.median_prix_m2) != null ? [{ label: t.kpiPrice12m, value: formatEUR((m.median_prix_m2_12m ?? m.median_prix_m2) as number, locale), tone: 'neutral' as Tone }] : []),

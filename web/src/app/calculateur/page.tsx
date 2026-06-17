@@ -322,6 +322,15 @@ export default function CalculatorPage() {
                 </div>
               </div>
 
+              <RentAllocation
+                rent={rent}
+                debt={r.payment + r.loanInsM}
+                charges={r.monthlyCharges}
+                cashflow={r.cashflowM}
+                locale={locale}
+                labels={{ title: t.allocTitle, debt: t.allocDebt, charges: t.allocCharges, cashflow: t.allocCashflow, deficit: t.allocDeficit }}
+              />
+
               <div className="my-2 border-t border-slate-100" />
               <Row label={t.rNetCashflowM} value={formatEUR(Math.round(proj.netCfM), locale)} />
               <div className="mt-1 flex items-center justify-between rounded-xl px-3 py-2"
@@ -436,6 +445,46 @@ function Num({ label, value, onChange, suffix, step = 1 }: {
         {suffix && <span className="pr-2.5 text-xs text-slate-400">{suffix}</span>}
       </div>
     </label>
+  );
+}
+
+// Horizontal stacked bar: how each € of rent splits into loan, costs, and the
+// remaining cashflow (or, when negative, the monthly top-up beyond the rent).
+function RentAllocation({ rent, debt, charges, cashflow, locale, labels }: {
+  rent: number; debt: number; charges: number; cashflow: number; locale: string;
+  labels: { title: string; debt: string; charges: string; cashflow: string; deficit: string };
+}) {
+  if (rent <= 0) return null;
+  const deficit = cashflow < 0 ? -cashflow : 0;
+  const denom = Math.max(rent, debt + charges); // when in deficit, outflow exceeds rent
+  const pct = (v: number) => `${Math.max(0, (v / denom) * 100)}%`;
+  const seg = [
+    { v: debt, color: '#475569', label: labels.debt },
+    { v: charges, color: '#cbd5e1', label: labels.charges },
+    cashflow >= 0
+      ? { v: cashflow, color: '#10b981', label: labels.cashflow }
+      : { v: deficit, color: '#dc2626', label: labels.deficit },
+  ].filter((s) => s.v > 0.5);
+  return (
+    <div className="mt-3">
+      <div className="mb-1.5 flex items-center justify-between text-[11px]">
+        <span className="font-medium uppercase tracking-wide text-slate-400">{labels.title}</span>
+        <span className="tabular-nums text-slate-400">{formatEUR(Math.round(rent), locale)}/mo</span>
+      </div>
+      <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+        {seg.map((s, i) => (
+          <div key={i} style={{ width: pct(s.v), background: s.color }} title={`${s.label}: ${formatEUR(Math.round(s.v), locale)}`} />
+        ))}
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+        {seg.map((s, i) => (
+          <span key={i} className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-sm" style={{ background: s.color }} />
+            {s.label} <span className="tabular-nums text-slate-400">{formatEUR(Math.round(s.v), locale)}</span>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
