@@ -167,7 +167,7 @@ export interface CommuneProfile {
   } | null;
   dpe: { dpe_total: number; pct_passoire: number | null; pct_abc: number | null } | null;
   resale: { resales: number; median_gain_pct: number | null; median_annualized: number | null } | null;
-  demo: { population: number | null; pop_growth: number | null; median_income: number | null; owner_pct?: number | null; renter_pct?: number | null; vacancy_pct?: number | null; secondary_pct?: number | null; unemployment_pct?: number | null } | null;
+  demo: { population: number | null; pop_growth: number | null; median_income: number | null; owner_pct?: number | null; renter_pct?: number | null; vacancy_pct?: number | null; secondary_pct?: number | null; unemployment_pct?: number | null; ips_mean?: number | null } | null;
   tax: { taux_tfb: number | null; taux_th: number | null; thrs_major: string | null } | null;
   airbnb: {
     listings: number;

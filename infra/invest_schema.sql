@@ -197,6 +197,7 @@ ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS renter_pct       numeric;  -- 
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS vacancy_pct      numeric;  -- % vacant dwellings
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS secondary_pct    numeric;  -- % secondary/occasional
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS unemployment_pct numeric;  -- % unemployed 15-64 (RP)
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS ips_mean         numeric;  -- mean school social-position index (IPS)
 
 -- Per-commune energy profile of the housing stock.
 CREATE TABLE IF NOT EXISTS commune_dpe (
