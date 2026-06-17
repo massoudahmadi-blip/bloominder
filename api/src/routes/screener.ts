@@ -93,7 +93,8 @@ export async function screenerRoutes(app: FastifyInstance) {
     );
     const [demo] = await query(
       `SELECT population, pop_growth, median_income,
-              owner_pct, renter_pct, vacancy_pct, secondary_pct, unemployment_pct, ips_mean
+              owner_pct, renter_pct, vacancy_pct, secondary_pct, unemployment_pct, ips_mean,
+              permits_logements, permits_year
        FROM commune_demo WHERE code_commune = $1`,
       [code],
     );

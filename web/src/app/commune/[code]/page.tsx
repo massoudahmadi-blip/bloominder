@@ -136,6 +136,7 @@ export default function CommunePage() {
               {data.demo?.vacancy_pct != null && <Kpi label={t.kpiVacancy} value={`${data.demo.vacancy_pct}%`} />}
               {data.demo?.unemployment_pct != null && <Kpi label={t.kpiUnemployment} value={`${data.demo.unemployment_pct}%`} />}
               {data.demo?.ips_mean != null && <Kpi label={t.kpiIps} value={String(data.demo.ips_mean)} />}
+              {data.demo?.permits_logements != null && <Kpi label={t.kpiPermits} value={`${Math.round(data.demo.permits_logements)}/an`} />}
             </section>
 
             {/* Price evolution */}

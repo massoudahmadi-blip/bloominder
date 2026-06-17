@@ -198,6 +198,8 @@ ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS vacancy_pct      numeric;  -- 
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS secondary_pct    numeric;  -- % secondary/occasional
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS unemployment_pct numeric;  -- % unemployed 15-64 (RP)
 ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS ips_mean         numeric;  -- mean school social-position index (IPS)
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS permits_logements numeric; -- avg dwellings authorised / year (Sit@del)
+ALTER TABLE commune_demo ADD COLUMN IF NOT EXISTS permits_year     int;      -- most recent permit year covered
 
 -- Per-commune energy profile of the housing stock.
 CREATE TABLE IF NOT EXISTS commune_dpe (
