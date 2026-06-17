@@ -91,13 +91,23 @@ export async function screenerRoutes(app: FastifyInstance) {
       `SELECT dpe_total, pct_passoire, pct_abc FROM commune_dpe WHERE code_commune = $1`,
       [code],
     );
-    const [demo] = await query(
-      `SELECT population, pop_growth, median_income,
-              owner_pct, renter_pct, vacancy_pct, secondary_pct, unemployment_pct, ips_mean,
-              permits_logements, permits_year
-       FROM commune_demo WHERE code_commune = $1`,
+    // Core demo columns (always present) + best-effort enrichment columns that
+    // may not be migrated yet — a missing column must never blank the report.
+    const [demoCore] = await query(
+      `SELECT population, pop_growth, median_income FROM commune_demo WHERE code_commune = $1`,
       [code],
     );
+    let demoExtra: Record<string, unknown> = {};
+    try {
+      const [ex] = await query(
+        `SELECT owner_pct, renter_pct, vacancy_pct, secondary_pct, unemployment_pct, ips_mean,
+                permits_logements, permits_year
+         FROM commune_demo WHERE code_commune = $1`,
+        [code],
+      );
+      demoExtra = ex ?? {};
+    } catch { /* enrichment columns not migrated yet */ }
+    const demo = demoCore ? { ...demoCore, ...demoExtra } : null;
     const [resale] = await query(
       `SELECT resales, median_gain_pct, median_annualized FROM commune_resale WHERE code_commune = $1`,
       [code],
