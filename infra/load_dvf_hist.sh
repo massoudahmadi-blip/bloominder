@@ -8,7 +8,10 @@
 # Usage (from infra/, db up, internet):
 #   ./load_dvf_hist.sh <year> <cquest_txt_url>
 #   e.g. ./load_dvf_hist.sh 2019 "https://data.cquest.org/dgfip_dvf/202010/valeursfoncieres-2019.txt"
-#        ./load_dvf_hist.sh 2020 "https://data.cquest.org/dgfip_dvf/202010/valeursfoncieres-2020.txt"
+#        ./load_dvf_hist.sh 2020 "https://data.cquest.org/dgfip_dvf/202110/valeursfoncieres-2020.txt"
+# Re-loading a year is safe: rows are deleted per-dept for that year before insert.
+# To refresh from a newer millésime (re-download + re-split the cached file):
+#   REFRESH=1 ./load_dvf_hist.sh 2020 "https://data.cquest.org/dgfip_dvf/202110/valeursfoncieres-2020.txt"
 # Then: ./backfill_geom.sh   &&   ./compute_metrics.sh
 # ---------------------------------------------------------------------------
 set -uo pipefail
@@ -21,6 +24,7 @@ Y="${1:?Usage: ./load_dvf_hist.sh <year> <cquest_txt_url>}"
 URL="${2:?need the cquest .txt URL}"
 TXT="$DATA/valeursfoncieres-$Y.txt"; SDIR="$DATA/split_$Y"
 
+if [ "${REFRESH:-0}" = "1" ]; then echo ">> REFRESH: clearing cached $Y file + split..."; rm -f "$TXT"; rm -rf "$SDIR"; fi
 [ -f "$TXT" ] || { echo ">> Downloading $Y (~300 MB)..."; curl -fSL "$URL" -o "$TXT" || { echo "download failed"; exit 1; }; }
 if [ ! -d "$SDIR" ] || [ -z "$(ls -A "$SDIR" 2>/dev/null)" ]; then
   echo ">> Splitting $Y by department..."
