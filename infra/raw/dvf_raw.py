@@ -44,6 +44,30 @@ def to_iso(d: str) -> str:
         return ""
 
 
+# DGFiP abbreviates the street type ("Type de voie"). Expand the common ones so
+# the stored address reads "5 bis Passage Piver" (matches BAN + free-text search)
+# rather than "5 PASS PIVER".
+VOIE_TYPES = {
+    "ALL": "Allée", "AV": "Avenue", "BD": "Boulevard", "CAR": "Carrefour",
+    "CHE": "Chemin", "CHS": "Chaussée", "CITE": "Cité", "COR": "Corniche",
+    "CRS": "Cours", "DOM": "Domaine", "DSC": "Descente", "ESP": "Esplanade",
+    "FG": "Faubourg", "GR": "Grande Rue", "HAM": "Hameau", "HLE": "Halle",
+    "IMP": "Impasse", "LD": "Lieu-dit", "LOT": "Lotissement", "MAR": "Marché",
+    "MTE": "Montée", "PAS": "Passage", "PASS": "Passage", "PL": "Place",
+    "PLN": "Plaine", "PLT": "Plateau", "PRO": "Promenade", "PRV": "Parvis",
+    "QUA": "Quartier", "QU": "Quai", "RES": "Résidence", "RPT": "Rond-Point",
+    "RTE": "Route", "RUE": "Rue", "SEN": "Sentier", "SQ": "Square",
+    "TRA": "Traverse", "VLA": "Villa", "VLGE": "Village", "VOIE": "Voie",
+}
+# Repetition index ("B/T/Q"): B=bis, T=ter, Q=quater (others kept as-is, lower-cased).
+BTQ = {"B": "bis", "T": "ter", "Q": "quater"}
+
+
+def expand_voie(t: str) -> str:
+    t = (t or "").strip()
+    return VOIE_TYPES.get(t.upper(), t)
+
+
 def norm_type(t: str, surface_terrain: str) -> str:
     t = (t or "").strip()
     if t.startswith("Maison"):
@@ -70,8 +94,11 @@ def build(row: dict):
     if not valeur:
         return None
 
-    numero = (row.get("No voie") or "").strip()
-    voie = f"{(row.get('Type de voie') or '').strip()} {(row.get('Voie') or '').strip()}".strip()
+    no_voie = (row.get("No voie") or "").strip()
+    btq = (row.get("B/T/Q") or "").strip()
+    rep = BTQ.get(btq.upper(), btq.lower()) if btq else ""
+    numero = f"{no_voie} {rep}".strip() if rep else no_voie
+    voie = f"{expand_voie(row.get('Type de voie'))} {(row.get('Voie') or '').strip()}".strip()
     cp = (row.get("Code postal") or "").strip()
     commune = (row.get("Commune") or "").strip()
     ccom = (row.get("Code commune") or "").strip()

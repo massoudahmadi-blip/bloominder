@@ -6,8 +6,9 @@
 #
 # Source: https://cadastre.data.gouv.fr/data/etalab-cadastre/latest/geojson/communes/<dep>/<insee>/cadastre-<insee>-parcelles.json.gz
 #
-# Usage (from infra/, internet access; long-running — consider nohup/screen):
-#   ./backfill_geom.sh
+# Usage (from infra/, internet access; long-running — consider tmux/nohup):
+#   ./backfill_geom.sh                 # every commune that still has un-located sales
+#   ./backfill_geom.sh 75111 13201     # only these communes (e.g. locate Paris 11e now)
 # ---------------------------------------------------------------------------
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; DATA="$HERE/data/cad"; mkdir -p "$DATA"
@@ -22,8 +23,13 @@ psql -c "DROP TABLE IF EXISTS stg_cad; CREATE TABLE stg_cad(id_parcelle text, lo
 # Department directory for the cadastre path (metropole=2 digits, Corsica 2A/2B, DOM=3).
 depdir() { local c="$1"; case "$c" in 97*|98*) echo "${c:0:3}";; 2A*|2B*) echo "${c:0:2}";; *) echo "${c:0:2}";; esac; }
 
-mapfile -t COMMUNES < <(psql -tAc "SELECT DISTINCT code_commune FROM transactions WHERE geom IS NULL AND id_parcelle IS NOT NULL ORDER BY 1")
-echo ">> ${#COMMUNES[@]} communes with un-located sales."
+if [ "$#" -gt 0 ]; then
+  COMMUNES=("$@")
+  echo ">> Targeted backfill: ${#COMMUNES[@]} commune(s) — $*"
+else
+  mapfile -t COMMUNES < <(psql -tAc "SELECT DISTINCT code_commune FROM transactions WHERE geom IS NULL AND id_parcelle IS NOT NULL ORDER BY 1")
+  echo ">> ${#COMMUNES[@]} communes with un-located sales."
+fi
 
 i=0
 for insee in "${COMMUNES[@]}"; do
