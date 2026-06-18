@@ -31,7 +31,7 @@ if [ ! -d "$SDIR" ] || [ -z "$(ls -A "$SDIR" 2>/dev/null)" ]; then
   python3 "$HERE/raw/dvf_raw.py" split --year "$Y" --infile "$TXT" --outdir "$SDIR"
 fi
 
-psql -c "CREATE TABLE IF NOT EXISTS stg_clean(id_synth text,date_mutation date,nature text,valeur numeric,addr_key text,adresse text,code_postal text,code_commune text,nom_commune text,code_departement text,id_parcelle text,type_local text,surface_bati numeric,nb_pieces int,surface_terrain numeric);" >/dev/null
+psql -c "DROP TABLE IF EXISTS stg_clean; CREATE TABLE stg_clean(id_synth text,date_mutation date,nature text,valeur numeric,addr_key text,adresse text,code_postal text,code_commune text,nom_commune text,code_departement text,id_parcelle text,type_local text,surface_bati numeric,nb_pieces int,surface_terrain numeric,prefixe_section text,section text,no_plan text,no_volume text,nombre_lots int,surface_carrez numeric);" >/dev/null
 
 for CLEAN in "$SDIR"/clean_*.csv; do
   [ -e "$CLEAN" ] || continue
@@ -43,11 +43,15 @@ for CLEAN in "$SDIR"/clean_*.csv; do
 DELETE FROM transactions t USING (SELECT DISTINCT code_departement FROM stg_clean) s
 WHERE t.code_departement = s.code_departement AND extract(year FROM t.date_mutation) = $Y;
 INSERT INTO transactions(id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse,code_postal,
-  code_commune,nom_commune,code_departement,id_parcelle,type_local,surface_bati,nb_pieces,surface_terrain,prix_m2)
+  code_commune,nom_commune,code_departement,id_parcelle,type_local,surface_bati,nb_pieces,surface_terrain,
+  prefixe_section,section,no_plan,no_volume,nombre_lots,surface_carrez,prix_m2)
 SELECT c.id_synth,c.date_mutation,c.nature,c.valeur,NULLIF(c.adresse,''),c.code_postal,
   c.code_commune,c.nom_commune,c.code_departement,NULLIF(c.id_parcelle,''),NULLIF(c.type_local,''),
   c.surface_bati,c.nb_pieces,c.surface_terrain,
-  CASE WHEN c.surface_bati>5 AND c.valeur>0 THEN round(c.valeur/c.surface_bati) END
+  NULLIF(c.prefixe_section,''),NULLIF(c.section,''),NULLIF(c.no_plan,''),NULLIF(c.no_volume,''),
+  c.nombre_lots,c.surface_carrez,
+  CASE WHEN c.valeur>0 AND coalesce(NULLIF(c.surface_carrez,0),c.surface_bati)>5
+       THEN round(c.valeur/coalesce(NULLIF(c.surface_carrez,0),c.surface_bati)) END
 FROM stg_clean c WHERE c.valeur IS NOT NULL AND c.valeur>0;
 SQL
   echo "   loaded dept $d $Y"

@@ -375,10 +375,18 @@ export function PropertyMap({
               </div>
 
               <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
-                <Metric label={t.surface} value={hovered.surface_bati != null ? formatM2(hovered.surface_bati) : '—'} />
+                <Metric label={t.surface} value={hovered.surface_carrez != null ? formatM2(hovered.surface_carrez) : (hovered.surface_bati != null ? formatM2(hovered.surface_bati) : '—')} />
                 <Metric label={t.land} value={hovered.surface_terrain != null ? formatM2(hovered.surface_terrain) : '—'} />
                 <Metric label={t.soldOn} value={hovered.date ? formatDate(hovered.date, locale) : '—'} />
               </div>
+
+              {(hovered.id_parcelle || hovered.nombre_lots) && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                  {hovered.id_parcelle && <span>{t.parcelLabel}: <b className="font-mono text-slate-700">{hovered.id_parcelle}</b></span>}
+                  {hovered.nombre_lots ? <span>{hovered.nombre_lots} {t.lotsLabel}</span> : null}
+                  {hovered.geo_precision === 'commune' && <span className="text-amber-600">{t.precApprox}</span>}
+                </div>
+              )}
 
               {hovered.resale_pct != null && (
                 <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">

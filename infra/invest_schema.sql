@@ -13,6 +13,16 @@
 ALTER TABLE transactions ADD COLUMN IF NOT EXISTS geo_precision text;
 CREATE INDEX IF NOT EXISTS transactions_geo_precision_idx ON transactions (geo_precision);
 
+-- Cadastral identity + condo lots (raw DGFiP DVF). The parcel id is built from
+-- code_commune+prefixe+section+no_plan and is the authoritative locator; the
+-- Carrez surface is the legal area of the condo lots (better €/m² for flats).
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS prefixe_section text;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS section          text;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS no_plan          text;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS no_volume        text;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS nombre_lots      integer;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS surface_carrez   numeric;
+
 -- All commune centres (geo.api.gouv) — the commune-centroid fallback tier.
 CREATE TABLE IF NOT EXISTS commune_centre (
   code_commune text PRIMARY KEY,

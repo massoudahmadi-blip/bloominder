@@ -76,7 +76,13 @@ CREATE TABLE transactions (
   surface_bati      numeric,
   nb_pieces         integer,
   surface_terrain   numeric,
-  prix_m2           numeric,              -- valeur_fonciere / surface_bati (when sensible)
+  prix_m2           numeric,              -- valeur_fonciere / surface (when sensible)
+  prefixe_section   text,
+  section           text,
+  no_plan           text,
+  no_volume         text,
+  nombre_lots       integer,
+  surface_carrez    numeric,              -- legal (Carrez) area of the condo lots
   longitude         double precision,
   latitude          double precision,
   geom              geometry(Point, 4326),

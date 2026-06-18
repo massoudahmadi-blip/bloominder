@@ -68,11 +68,14 @@ export async function mapRoutes(app: FastifyInstance) {
       valeur_fonciere: string; type_local: string | null; prix_m2: string | null;
       adresse: string | null; nom_commune: string | null; code_commune: string | null;
       surface_bati: number | null; surface_terrain: number | null; nb_pieces: number | null;
+      id_parcelle: string | null; section: string | null; surface_carrez: string | null;
+      nombre_lots: number | null; geo_precision: string | null;
       longitude: number; latitude: number;
       resale_pct: string | null; resale_prev_date: string | null; dpe: string | null;
     }>(
       `SELECT t.id, t.id_mutation, t.date_mutation, t.valeur_fonciere, t.type_local, t.prix_m2,
               t.adresse, t.nom_commune, t.code_commune, t.surface_bati, t.surface_terrain, t.nb_pieces,
+              t.id_parcelle, t.section, t.surface_carrez, t.nombre_lots, t.geo_precision,
               t.longitude, t.latitude, r.change_pct AS resale_pct, r.prev_date AS resale_prev_date,
               td.etiquette_dpe AS dpe
        FROM transactions t
@@ -103,6 +106,11 @@ export async function mapRoutes(app: FastifyInstance) {
           surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
           surface_terrain: r.surface_terrain != null ? Number(r.surface_terrain) : null,
           nb_pieces: r.nb_pieces != null ? Number(r.nb_pieces) : null,
+          id_parcelle: r.id_parcelle,
+          section: r.section,
+          surface_carrez: r.surface_carrez != null ? Number(r.surface_carrez) : null,
+          nombre_lots: r.nombre_lots != null ? Number(r.nombre_lots) : null,
+          geo_precision: r.geo_precision,
           resale_pct: r.resale_pct != null ? Number(r.resale_pct) : null,
           resale_prev_date: r.resale_prev_date,
           dpe: r.dpe,

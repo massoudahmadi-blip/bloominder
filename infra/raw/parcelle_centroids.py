@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Read an Etalab cadastre "parcelles" GeoJSON (one commune) and emit a CSV of
-parcel-id → centroid (lon, lat). Used to locate DVF transactions by their
-cadastral parcel when address geocoding failed. Stdlib only.
+parcel-id → centroid (lon, lat) + the parcel polygon (GeoJSON). The polygon lets
+the placement step authoritatively position each DVF sale on its cadastral
+parcel and detect/override address points that fall outside it. Stdlib only.
 
 Usage: python3 parcelle_centroids.py --infile cadastre-13055-parcelles.json --out out.csv
 """
@@ -39,14 +40,15 @@ def main():
     n = 0
     with open(a.out, 'w', encoding='utf-8', newline='') as fo:
         w = csv.writer(fo)
-        w.writerow(['id_parcelle', 'lon', 'lat'])
+        w.writerow(['id_parcelle', 'lon', 'lat', 'geom_json'])
         for feat in data.get('features', []):
+            geom = feat.get('geometry')
             pid = (feat.get('properties') or {}).get('id')
-            c = centroid(feat.get('geometry'))
+            c = centroid(geom)
             if pid and c:
-                w.writerow([pid, round(c[0], 6), round(c[1], 6)])
+                w.writerow([pid, round(c[0], 6), round(c[1], 6), json.dumps(geom, separators=(',', ':'))])
                 n += 1
-    sys.stderr.write(f'  {n} parcel centroids -> {a.out}\n')
+    sys.stderr.write(f'  {n} parcels (centroid+polygon) -> {a.out}\n')
 
 
 if __name__ == '__main__':

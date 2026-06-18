@@ -30,7 +30,7 @@ BAN="https://api-adresse.data.gouv.fr/search/csv/"
 psql() { docker compose -f "$HERE/docker-compose.yml" exec -T db psql -v ON_ERROR_STOP=1 -U "$USR" -d "$DB" "$@"; }
 
 echo ">> Preparing staging tables..."
-psql -c "CREATE TABLE IF NOT EXISTS stg_clean(id_synth text,date_mutation date,nature text,valeur numeric,addr_key text,adresse text,code_postal text,code_commune text,nom_commune text,code_departement text,id_parcelle text,type_local text,surface_bati numeric,nb_pieces int,surface_terrain numeric);
+psql -c "DROP TABLE IF EXISTS stg_clean; CREATE TABLE stg_clean(id_synth text,date_mutation date,nature text,valeur numeric,addr_key text,adresse text,code_postal text,code_commune text,nom_commune text,code_departement text,id_parcelle text,type_local text,surface_bati numeric,nb_pieces int,surface_terrain numeric,prefixe_section text,section text,no_plan text,no_volume text,nombre_lots int,surface_carrez numeric);
 CREATE TABLE IF NOT EXISTS stg_geo(addr_key text,lat double precision,lon double precision,score double precision);"
 
 for Y in $(seq "$Y1" "$Y2"); do
@@ -66,14 +66,19 @@ for Y in $(seq "$Y1" "$Y2"); do
   psql <<'SQL'
 INSERT INTO transactions(id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse,code_postal,
   code_commune,nom_commune,code_departement,id_parcelle,type_local,surface_bati,nb_pieces,surface_terrain,
-  prix_m2,longitude,latitude,geom)
+  prefixe_section,section,no_plan,no_volume,nombre_lots,surface_carrez,
+  prix_m2,longitude,latitude,geom,geo_precision)
 SELECT c.id_synth,c.date_mutation,c.nature,c.valeur,NULLIF(c.adresse,''),c.code_postal,
   c.code_commune,c.nom_commune,c.code_departement,NULLIF(c.id_parcelle,''),NULLIF(c.type_local,''),
   c.surface_bati,c.nb_pieces,c.surface_terrain,
-  CASE WHEN c.surface_bati > 5 AND c.valeur > 0 THEN round(c.valeur / c.surface_bati) END,
+  NULLIF(c.prefixe_section,''),NULLIF(c.section,''),NULLIF(c.no_plan,''),NULLIF(c.no_volume,''),
+  c.nombre_lots,c.surface_carrez,
+  CASE WHEN c.valeur > 0 AND coalesce(NULLIF(c.surface_carrez,0),c.surface_bati) > 5
+       THEN round(c.valeur / coalesce(NULLIF(c.surface_carrez,0),c.surface_bati)) END,
   g.lon, g.lat,
   CASE WHEN g.lon IS NOT NULL AND g.lat IS NOT NULL
-       THEN ST_SetSRID(ST_MakePoint(g.lon, g.lat), 4326) END
+       THEN ST_SetSRID(ST_MakePoint(g.lon, g.lat), 4326) END,
+  CASE WHEN g.lon IS NOT NULL AND g.lat IS NOT NULL THEN 'address' END
 FROM stg_clean c
 LEFT JOIN stg_geo g USING (addr_key)
 WHERE c.valeur IS NOT NULL AND c.valeur > 0;

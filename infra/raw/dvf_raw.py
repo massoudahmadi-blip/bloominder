@@ -25,6 +25,7 @@ CLEAN_HEADER = [
     "id_synth", "date_mutation", "nature", "valeur", "addr_key", "adresse",
     "code_postal", "code_commune", "nom_commune", "code_departement",
     "id_parcelle", "type_local", "surface_bati", "nb_pieces", "surface_terrain",
+    "prefixe_section", "section", "no_plan", "no_volume", "nombre_lots", "surface_carrez",
 ]
 ADDR_HEADER = ["addr_key", "numero", "voie", "code_postal", "citycode"]
 
@@ -106,16 +107,28 @@ def build(row: dict):
     sect = (row.get("Section") or "").strip()
     plan = (row.get("No plan") or "").strip()
     pref = (row.get("Prefixe de section") or "").strip()
+    vol = (row.get("No Volume") or "").strip()
     parcelle = f"{insee}{(pref or '000').zfill(3)}{sect}{plan.zfill(4)}" if insee and sect else ""
     st = num(row.get("Surface terrain"))
     tl = norm_type(row.get("Type local"), st)
     adresse = " ".join(x for x in [numero, voie] if x).strip()
     k = addr_key(numero, voie, cp, commune)
 
+    # Condo lots: sum the Carrez (legal) surfaces; count the lots.
+    carrez = 0.0
+    for i in range(1, 6):
+        v = num(row.get(f"Surface Carrez du {i}er lot" if i == 1 else f"Surface Carrez du {i}eme lot"))
+        try:
+            carrez += float(v)
+        except ValueError:
+            pass
+    nb_lots = (row.get("Nombre de lots") or "").strip()
+
     clean = [
         to_iso(row.get("Date mutation")), "Vente", valeur, k, adresse, cp, insee,
         commune, cd, parcelle, tl, num(row.get("Surface reelle bati")),
         (row.get("Nombre pieces principales") or "").strip(), st,
+        pref, sect, plan, vol, nb_lots, (f"{carrez:.2f}" if carrez > 0 else ""),
     ]
     addr = [k, numero, voie, cp, insee]
     return cd, clean, addr

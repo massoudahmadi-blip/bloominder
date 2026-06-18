@@ -14,6 +14,11 @@ export interface Sale {
   surface_bati?: number | null;
   nb_pieces?: number | null;
   surface_terrain?: number | null;
+  id_parcelle?: string | null;
+  section?: string | null;
+  surface_carrez?: number | null;
+  nombre_lots?: number | null;
+  geo_precision?: string | null;
   resale_pct?: number | null; // realized gain vs the previous sale of the same property
   resale_prev_date?: string | null;
   dpe?: string | null; // DPE energy class A–G of the nearest matched diagnostic
