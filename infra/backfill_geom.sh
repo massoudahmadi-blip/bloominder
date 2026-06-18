@@ -44,7 +44,7 @@ for insee in "${COMMUNES[@]}"; do
   psql -c "TRUNCATE stg_cad;" >/dev/null
   psql -c "\copy stg_cad FROM '/data/cad/p.csv' CSV HEADER" >/dev/null
   psql -c "UPDATE transactions t SET longitude=s.lon, latitude=s.lat,
-             geom=ST_SetSRID(ST_MakePoint(s.lon,s.lat),4326)
+             geom=ST_SetSRID(ST_MakePoint(s.lon,s.lat),4326), geo_precision='parcel'
            FROM stg_cad s
            WHERE t.code_commune='${insee}' AND t.geom IS NULL AND t.id_parcelle = s.id_parcelle;" >/dev/null
   [ $((i % 50)) -eq 0 ] && echo "   …$i/${#COMMUNES[@]} communes processed"

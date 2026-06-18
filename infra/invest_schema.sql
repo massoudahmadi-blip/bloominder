@@ -1,5 +1,34 @@
 -- Bloominder investor layer (Phase A). Idempotent — safe to run repeatedly.
 
+-- ---------------------------------------------------------------------------
+-- Geocoding provenance + reference geometry for the placement pipeline.
+-- geo_precision records HOW each transaction was placed, best → worst:
+--   'source'  native coordinates from geo-DVF (exact)
+--   'parcel'  cadastral parcel centroid (Etalab), by id_parcelle
+--   'address' BAN address geocode (numéro+voie+CP+commune)
+--   'commune' commune centre — last resort, low precision
+--   NULL      not yet located
+-- A better tier must never be overwritten by a worse one (see fix_geocoding.sh).
+-- ---------------------------------------------------------------------------
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS geo_precision text;
+CREATE INDEX IF NOT EXISTS transactions_geo_precision_idx ON transactions (geo_precision);
+
+-- All commune centres (geo.api.gouv) — the commune-centroid fallback tier.
+CREATE TABLE IF NOT EXISTS commune_centre (
+  code_commune text PRIMARY KEY,
+  lon          double precision,
+  lat          double precision,
+  geom         geometry(Point, 4326)
+);
+
+-- Department polygons (101) — used by qa_coverage.sh to flag points that fall
+-- outside the department they claim to be in (mis-geocoding detector).
+CREATE TABLE IF NOT EXISTS dept_geom (
+  code_departement text PRIMARY KEY,
+  geom             geometry(MultiPolygon, 4326)
+);
+CREATE INDEX IF NOT EXISTS dept_geom_gix ON dept_geom USING gist (geom);
+
 -- Indicative rents per m²/month by commune (gouv "Carte des loyers").
 CREATE TABLE IF NOT EXISTS rents_commune (
   code_commune          text PRIMARY KEY,

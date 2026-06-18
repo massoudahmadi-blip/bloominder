@@ -79,5 +79,6 @@ CREATE TABLE transactions (
   prix_m2           numeric,              -- valeur_fonciere / surface_bati (when sensible)
   longitude         double precision,
   latitude          double precision,
-  geom              geometry(Point, 4326)
+  geom              geometry(Point, 4326),
+  geo_precision     text                  -- how geom was placed: source|parcel|address|commune
 );
