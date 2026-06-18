@@ -59,7 +59,8 @@ INSERT INTO transactions (
   id_mutation, date_mutation, nature_mutation, valeur_fonciere,
   adresse, code_postal, code_commune, nom_commune, code_departement,
   id_parcelle, type_local, surface_bati, nb_pieces, surface_terrain,
-  prix_m2, longitude, latitude, geom
+  prefixe_section, section, no_plan, no_volume, nombre_lots, surface_carrez,
+  prix_m2, longitude, latitude, geom, geo_precision
 )
 SELECT
   id_mutation,
@@ -76,17 +77,36 @@ SELECT
   NULLIF(surface_reelle_bati,'')::numeric,
   NULLIF(nombre_pieces_principales,'')::int,
   NULLIF(surface_terrain,'')::numeric,
+  -- parcel parts: derived from the 14-char id_parcelle (insee5+prefixe3+section2+plan4)
+  CASE WHEN length(id_parcelle)=14 THEN substring(id_parcelle from 6 for 3) END,
+  CASE WHEN length(id_parcelle)=14 THEN substring(id_parcelle from 9 for 2) END,
+  CASE WHEN length(id_parcelle)=14 THEN substring(id_parcelle from 11 for 4) END,
+  NULLIF(numero_volume,''),
+  NULLIF(nombre_lots,'')::int,
+  NULLIF(
+    coalesce(NULLIF(lot1_surface_carrez,'')::numeric,0) + coalesce(NULLIF(lot2_surface_carrez,'')::numeric,0)
+  + coalesce(NULLIF(lot3_surface_carrez,'')::numeric,0) + coalesce(NULLIF(lot4_surface_carrez,'')::numeric,0)
+  + coalesce(NULLIF(lot5_surface_carrez,'')::numeric,0), 0),
   CASE
-    WHEN NULLIF(surface_reelle_bati,'')::numeric > 5
-     AND NULLIF(valeur_fonciere,'')::numeric > 0
+    WHEN NULLIF(valeur_fonciere,'')::numeric > 0
+     AND coalesce(
+           NULLIF(coalesce(NULLIF(lot1_surface_carrez,'')::numeric,0)+coalesce(NULLIF(lot2_surface_carrez,'')::numeric,0)
+                 +coalesce(NULLIF(lot3_surface_carrez,'')::numeric,0)+coalesce(NULLIF(lot4_surface_carrez,'')::numeric,0)
+                 +coalesce(NULLIF(lot5_surface_carrez,'')::numeric,0),0),
+           NULLIF(surface_reelle_bati,'')::numeric) > 5
     THEN round(NULLIF(valeur_fonciere,'')::numeric
-               / NULLIF(surface_reelle_bati,'')::numeric, 0)
+               / coalesce(
+                   NULLIF(coalesce(NULLIF(lot1_surface_carrez,'')::numeric,0)+coalesce(NULLIF(lot2_surface_carrez,'')::numeric,0)
+                         +coalesce(NULLIF(lot3_surface_carrez,'')::numeric,0)+coalesce(NULLIF(lot4_surface_carrez,'')::numeric,0)
+                         +coalesce(NULLIF(lot5_surface_carrez,'')::numeric,0),0),
+                   NULLIF(surface_reelle_bati,'')::numeric), 0)
     ELSE NULL
   END,
   NULLIF(longitude,'')::double precision,
   NULLIF(latitude,'')::double precision,
   ST_SetSRID(ST_MakePoint(NULLIF(longitude,'')::double precision,
-                          NULLIF(latitude,'')::double precision), 4326)
+                          NULLIF(latitude,'')::double precision), 4326),
+  'source'
 FROM dvf_raw
 WHERE nature_mutation = 'Vente'         -- real sales only (skip exchanges/expropriations)
   AND longitude <> '' AND latitude <> ''
