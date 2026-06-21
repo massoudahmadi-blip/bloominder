@@ -82,6 +82,26 @@ export async function getComparables(lat: number, lon: number, type?: string | n
   }));
 }
 
+export interface MutationPart {
+  type: string; count: number;
+  surface_bati: number; surface_carrez: number; surface_terrain: number; pieces: number;
+}
+export interface Mutation {
+  valeur: number; date: string; code_commune: string;
+  n_lines: number; parcels: string[];
+  surface_terrain_total: number; surface_hab_total: number; prix_m2: number | null;
+  composition: MutationPart[];
+}
+
+// Full composition of one sale (every lot/parcel/local it bundled), grouped by
+// the natural key so it works for every year.
+export async function getMutation(code: string, date: string, valeur: number): Promise<Mutation | null> {
+  if (USING_MOCK || !code || !date) return null;
+  const res = await fetch(`${API}/api/mutation?code=${encodeURIComponent(code)}&date=${encodeURIComponent(date)}&valeur=${valeur}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Full recorded sale history of one cadastral parcel (most accurate "this exact
 // property" history — independent of the comparables recency window).
 export async function getParcelHistory(idParcelle: string): Promise<Sale[]> {

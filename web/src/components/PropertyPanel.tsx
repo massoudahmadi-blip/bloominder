@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sale, YearTrend } from '@/lib/types';
-import { getComparables, getTrend, getParcelHistory } from '@/lib/api';
+import { getComparables, getTrend, getParcelHistory, getMutation, Mutation } from '@/lib/api';
 import { formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { TrendChart } from './TrendChart';
@@ -21,15 +21,18 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
   const [comps, setComps] = useState<Sale[]>([]);
   const [trend, setTrend] = useState<YearTrend[]>([]);
   const [history, setHistory] = useState<Sale[]>([]);
+  const [mutation, setMutation] = useState<Mutation | null>(null);
 
   useEffect(() => {
     if (!sale) return;
     setComps([]);
     setTrend([]);
     setHistory([]);
+    setMutation(null);
     getComparables(sale.latitude, sale.longitude, sale.type).then(setComps).catch(() => {});
     getTrend(sale.code_commune, sale.type).then(setTrend).catch(() => {});
     if (sale.id_parcelle) getParcelHistory(sale.id_parcelle).then(setHistory).catch(() => {});
+    if (sale.code_commune && sale.date) getMutation(sale.code_commune, sale.date, sale.prix).then(setMutation).catch(() => {});
   }, [sale]);
 
   if (!sale) return null;
@@ -123,6 +126,40 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
               {sale.nombre_lots ? <span>{sale.nombre_lots} {t.lotsLabel}</span> : null}
               {(sale.geo_precision === 'commune' || sale.geo_precision === 'locality') && <span className="text-amber-600">{t.precApprox}</span>}
             </div>
+          )}
+
+          {/* What the sale bundled (full mutation composition) */}
+          {mutation && (mutation.composition.length > 1 || mutation.n_lines > 1 || mutation.surface_terrain_total > 0) && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.mutationTitle}</h3>
+              <div className="rounded-2xl border border-slate-100 p-3">
+                <ul className="space-y-1.5">
+                  {mutation.composition.map((c) => {
+                    const hab = c.surface_carrez > 0 ? c.surface_carrez : c.surface_bati;
+                    const detail = (c.type === 'Terrain')
+                      ? (c.surface_terrain > 0 ? formatM2(c.surface_terrain) : '')
+                      : (hab > 0 ? formatM2(hab) : '');
+                    return (
+                      <li key={c.type} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-700">
+                          {c.count > 1 && <span className="text-slate-400">{c.count}× </span>}
+                          {(t as any)[c.type] ?? c.type}
+                        </span>
+                        <span className="tabular-nums text-slate-500">{detail || '—'}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-100 pt-2.5 text-[11px] text-slate-400">
+                  <span>{mutation.parcels.length} {mutation.parcels.length > 1 ? t.parcellesLabel : t.parcelLabel}</span>
+                  {mutation.prix_m2 != null && <span>{formatPriceM2(mutation.prix_m2, locale)} ({t.surface})</span>}
+                  <span className="font-semibold text-slate-700">{formatEUR(mutation.valeur, locale)}</span>
+                </div>
+                {mutation.parcels.length > 0 && (
+                  <div className="mt-1.5 truncate font-mono text-[10px] text-slate-400">{mutation.parcels.join(' · ')}</div>
+                )}
+              </div>
+            </section>
           )}
 
           {/* Sale */}

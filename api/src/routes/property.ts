@@ -21,6 +21,68 @@ export async function propertyRoutes(app: FastifyInstance) {
     return { id_mutation: idMutation, lines: rows };
   });
 
+  // GET /api/mutation?code=13105&date=2022-07-08&valeur=900000
+  // The full composition of ONE sale (mutation): every lot/parcel/local it
+  // bundled. A mutation can repeat the full price across rows, so it's keyed by
+  // the natural key (code_commune, date, valeur) — works for every year, unlike
+  // id_mutation which is per-row in the raw national files.
+  const MutationQuery = z.object({
+    code: z.string(),
+    date: z.string(),
+    valeur: z.coerce.number(),
+  });
+
+  app.get('/mutation', async (req, reply) => {
+    const parsed = MutationQuery.safeParse(req.query);
+    if (!parsed.success) return reply.code(400).send({ error: 'invalid query' });
+    const { code, date, valeur } = parsed.data;
+
+    const lines = await query<{
+      id: number; type_local: string | null; surface_bati: string | null;
+      surface_carrez: string | null; surface_terrain: string | null; nb_pieces: number | null;
+      id_parcelle: string | null; section: string | null; no_plan: string | null; dpe: string | null;
+    }>(
+      `SELECT t.id, t.type_local, t.surface_bati, t.surface_carrez, t.surface_terrain, t.nb_pieces,
+              t.id_parcelle, t.section, t.no_plan, td.etiquette_dpe AS dpe
+       FROM transactions t
+       LEFT JOIN transaction_dpe td ON td.transaction_id = t.id
+       WHERE t.code_commune = $1 AND t.date_mutation = $2 AND t.valeur_fonciere = $3
+       ORDER BY coalesce(NULLIF(t.surface_carrez,0), t.surface_bati) DESC NULLS LAST`,
+      [code, date, valeur],
+    );
+
+    const num = (v: string | number | null) => (v == null ? 0 : Number(v));
+    // One group per category (Maison / Appartement / Dépendance / Terrain / …).
+    const cat = new Map<string, { type: string; count: number; surface_bati: number; surface_carrez: number; surface_terrain: number; pieces: number }>();
+    const parcels = new Set<string>();
+    for (const l of lines) {
+      const c = l.type_local || (num(l.surface_terrain) > 0 ? 'Terrain' : 'Autre');
+      const g = cat.get(c) ?? { type: c, count: 0, surface_bati: 0, surface_carrez: 0, surface_terrain: 0, pieces: 0 };
+      g.count += 1;
+      g.surface_bati += num(l.surface_bati);
+      g.surface_carrez += num(l.surface_carrez);
+      g.surface_terrain += num(l.surface_terrain);
+      g.pieces = Math.max(g.pieces, l.nb_pieces ?? 0);
+      cat.set(c, g);
+      if (l.id_parcelle) parcels.add(l.id_parcelle);
+    }
+    const ORDER = ['Maison', 'Appartement', 'Local', 'Dépendance', 'Terrain', 'Autre'];
+    const composition = [...cat.values()].sort((a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type));
+    const habBati = composition.filter((c) => c.type === 'Maison' || c.type === 'Appartement')
+      .reduce((s, c) => s + (c.surface_carrez > 0 ? c.surface_carrez : c.surface_bati), 0);
+
+    return {
+      valeur, date, code_commune: code,
+      n_lines: lines.length,
+      parcels: [...parcels],
+      surface_terrain_total: composition.reduce((s, c) => s + c.surface_terrain, 0),
+      surface_hab_total: habBati,
+      prix_m2: habBati > 8 ? Math.round(valeur / habBati) : null,
+      composition,
+      lines,
+    };
+  });
+
   // GET /api/parcel/:idParcelle  — full sale history for a cadastral parcel
   app.get('/parcel/:idParcelle', async (req) => {
     const { idParcelle } = req.params as { idParcelle: string };
