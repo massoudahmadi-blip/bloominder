@@ -82,6 +82,28 @@ export async function getComparables(lat: number, lon: number, type?: string | n
   }));
 }
 
+// Full recorded sale history of one cadastral parcel (most accurate "this exact
+// property" history — independent of the comparables recency window).
+export async function getParcelHistory(idParcelle: string): Promise<Sale[]> {
+  if (USING_MOCK || !idParcelle) return [];
+  const res = await fetch(`${API}/api/parcel/${encodeURIComponent(idParcelle)}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.history ?? []).map((r: any): Sale => ({
+    id: r.id,
+    id_mutation: r.id_mutation,
+    date: r.date_mutation,
+    prix: Number(r.valeur_fonciere),
+    type: r.type_local ?? null,
+    prix_m2: r.prix_m2 != null ? Number(r.prix_m2) : null,
+    adresse: r.adresse,
+    surface_bati: r.surface_bati != null ? Number(r.surface_bati) : null,
+    nb_pieces: r.nb_pieces ?? null,
+    longitude: 0,
+    latitude: 0,
+  }));
+}
+
 export interface RentControl {
   controlled: boolean;
   zone?: string; city?: string; rooms?: number; furnished?: boolean;

@@ -35,6 +35,8 @@ const REGION_DEPTS: Record<string, string[]> = {
   '93': ['04', '05', '06', '13', '83', '84'],
   '01': ['971'], '02': ['972'], '03': ['973'], '04': ['974'], '06': ['976'],
 };
+// Departments whose single parent commune is split into arrondissements in DVF.
+const ARR_PARENT: Record<string, string> = { '75': '75056', '69': '69123', '13': '13055' };
 
 function quantiles(vals: number[], n: number): number[] {
   const a = [...vals].sort((x, y) => x - y);
@@ -98,16 +100,31 @@ export function ChoroplethMap({ metric, ptype, locale, unit }: {
   }, []);
 
   // Commune geometry for the drilled department (geo.api.gouv contours).
+  // Paris/Lyon/Marseille are single communes (75056/69123/13055) but DVF is keyed
+  // by arrondissement (75101…, 69381…, 13201…), so swap the parent city for its
+  // arrondissements to show price per arrondissement.
   useEffect(() => {
     if (drill.level !== 'commune' || !drill.dept) return;
     const code = drill.dept.code;
     if (cache.current[`com-${code}`]) { setCommuneGeo(cache.current[`com-${code}`]); return; }
     setCommuneGeo(null);
-    fetch(`https://geo.api.gouv.fr/departements/${code}/communes?geometry=contour&format=geojson&fields=nom,code`)
-      .then((r) => (r.ok ? r.json() : null)).then((g) => {
-        if (!g?.features) return;
-        cache.current[`com-${code}`] = g; setCommuneGeo(g);
-      }).catch(() => {});
+    const parent = ARR_PARENT[code];
+    const base = `https://geo.api.gouv.fr/departements/${code}/communes?geometry=contour&format=geojson&fields=nom,code`;
+    const arrUrl = parent
+      ? `https://geo.api.gouv.fr/communes?type=arrondissement-municipal&codeDepartement=${code}&geometry=contour&format=geojson&fields=nom,code`
+      : null;
+    Promise.all([
+      fetch(base).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      arrUrl ? fetch(arrUrl).then((r) => (r.ok ? r.json() : null)).catch(() => null) : Promise.resolve(null),
+    ]).then(([g, a]) => {
+      if (!g?.features) return;
+      let features = g.features;
+      if (parent && a?.features?.length) {
+        features = features.filter((f: any) => f.properties.code !== parent).concat(a.features);
+      }
+      const merged = { type: 'FeatureCollection', features };
+      cache.current[`com-${code}`] = merged; setCommuneGeo(merged);
+    }).catch(() => {});
   }, [drill]);
 
   useEffect(() => {
@@ -145,9 +162,11 @@ export function ChoroplethMap({ metric, ptype, locale, unit }: {
     if (b) mapRef.current?.getMap()?.fitBounds(b, { padding: 24, duration: 600 });
   }, [data]);
 
-  // Labels only at region/dept (communes are too dense → hover instead).
+  // Labels at region/dept always; at commune level only when few features
+  // (e.g. the 20 Paris arrondissements) so dense departments stay readable.
   const labels = useMemo(() => {
-    if (!data || drill.level === 'commune') return [] as { lon: number; lat: number; label: string }[];
+    if (!data) return [] as { lon: number; lat: number; label: string }[];
+    if (drill.level === 'commune' && data.features.length > 30) return [];
     return data.features.filter((f: any) => f.properties.label)
       .map((f: any) => { const c = centroid(f.geometry); return c ? { lon: c[0], lat: c[1], label: f.properties.label } : null; })
       .filter(Boolean) as { lon: number; lat: number; label: string }[];

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sale, YearTrend } from '@/lib/types';
-import { getComparables, getTrend } from '@/lib/api';
+import { getComparables, getTrend, getParcelHistory } from '@/lib/api';
 import { formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { TrendChart } from './TrendChart';
@@ -16,22 +17,47 @@ function median(nums: number[]): number | null {
 
 export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: () => void }) {
   const { t, locale } = useI18n();
+  const router = useRouter();
   const [comps, setComps] = useState<Sale[]>([]);
   const [trend, setTrend] = useState<YearTrend[]>([]);
+  const [history, setHistory] = useState<Sale[]>([]);
 
   useEffect(() => {
     if (!sale) return;
     setComps([]);
     setTrend([]);
+    setHistory([]);
     getComparables(sale.latitude, sale.longitude, sale.type).then(setComps).catch(() => {});
     getTrend(sale.code_commune, sale.type).then(setTrend).catch(() => {});
+    if (sale.id_parcelle) getParcelHistory(sale.id_parcelle).then(setHistory).catch(() => {});
   }, [sale]);
 
   if (!sale) return null;
 
+  const surface = sale.surface_carrez ?? sale.surface_bati ?? null;
   const compM2 = median(comps.map((c) => c.prix_m2).filter((v): v is number => v != null));
   const estimate =
-    sale.surface_bati && compM2 ? Math.round((compM2 * sale.surface_bati) / 1000) * 1000 : null;
+    surface && compM2 ? Math.round((compM2 * surface) / 1000) * 1000 : null;
+  // Where this sale sits vs the local €/m² (over/under the comparables median).
+  const vsLocal = sale.prix_m2 != null && compM2 ? Math.round(((sale.prix_m2 - compM2) / compM2) * 100) : null;
+
+  const analyze = () => {
+    const p = new URLSearchParams();
+    p.set('lat', String(sale.latitude));
+    p.set('lon', String(sale.longitude));
+    const label = [sale.adresse, sale.nom_commune].filter(Boolean).join(', ');
+    if (label) p.set('label', label);
+    if (sale.code_commune) p.set('citycode', sale.code_commune);
+    if (surface) p.set('surface', String(Math.round(surface)));
+    if (sale.surface_terrain) p.set('terrain', String(Math.round(sale.surface_terrain)));
+    if (sale.type) p.set('type', sale.type);
+    if (sale.prix) p.set('prix', String(sale.prix));
+    if (sale.prix_m2 != null) p.set('prixm2', String(Math.round(sale.prix_m2)));
+    if (sale.date) p.set('date', sale.date);
+    if (sale.dpe) p.set('dpe', sale.dpe);
+    if (sale.nb_pieces != null) p.set('pieces', String(sale.nb_pieces));
+    router.push(`/adresse?${p.toString()}`);
+  };
 
   return (
     <>
@@ -47,12 +73,25 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
               {sale.adresse ? `${sale.adresse}, ` : ''}
               {sale.code_postal} {sale.nom_commune}
             </div>
-            {sale.resale_pct != null && (
-              <div className="mt-2 inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                {t.resold} {sale.resale_pct > 0 ? '+' : ''}{sale.resale_pct}%
-                {sale.resale_prev_date ? ` · ${new Date(sale.resale_prev_date).getFullYear()}` : ''}
-              </div>
-            )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {sale.resale_pct != null && (
+                <span className="inline-block rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                  {t.resold} {sale.resale_pct > 0 ? '+' : ''}{sale.resale_pct}%
+                  {sale.resale_prev_date ? ` · ${new Date(sale.resale_prev_date).getFullYear()}` : ''}
+                </span>
+              )}
+              {vsLocal != null && (
+                <span
+                  className="inline-block rounded-md px-2 py-1 text-xs font-semibold"
+                  style={{
+                    background: vsLocal > 10 ? '#fef2f2' : vsLocal < -10 ? '#ecfdf5' : '#f1f5f9',
+                    color: vsLocal > 10 ? '#b91c1c' : vsLocal < -10 ? '#047857' : '#475569',
+                  }}
+                >
+                  {vsLocal > 0 ? '+' : ''}{vsLocal}% {t.vsLocal}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -69,13 +108,22 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
           {/* Key facts */}
           <div className="grid grid-cols-4 gap-2">
             <Fact label={t.pricePerM2} value={formatPriceM2(sale.prix_m2, locale)} />
-            <Fact label={t.surface} value={formatM2(sale.surface_bati)} />
+            <Fact label={sale.surface_carrez != null ? `${t.surface} (Carrez)` : t.surface} value={formatM2(surface)} />
             <Fact label={t.rooms} value={sale.nb_pieces != null ? String(sale.nb_pieces) : '—'} />
             <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center">
               <div className="flex h-[22px] items-center justify-center"><EnergyBadge classe={sale.dpe} /></div>
               <div className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">DPE</div>
             </div>
           </div>
+
+          {/* Cadastral parcel */}
+          {(sale.id_parcelle || sale.nombre_lots) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-slate-100 px-4 py-2.5 text-xs text-slate-500">
+              {sale.id_parcelle && <span>{t.parcelLabel}: <b className="font-mono text-slate-700">{sale.id_parcelle}</b></span>}
+              {sale.nombre_lots ? <span>{sale.nombre_lots} {t.lotsLabel}</span> : null}
+              {sale.geo_precision === 'commune' && <span className="text-amber-600">{t.precApprox}</span>}
+            </div>
+          )}
 
           {/* Sale */}
           <section>
@@ -121,6 +169,26 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
             </section>
           )}
 
+          {/* This parcel's full sale history (exact property, any date) */}
+          {history.length > 1 && (
+            <section>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.parcelHistoryTitle}</h3>
+              <ul className="space-y-2">
+                {history.map((h) => (
+                  <li key={h.id} className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-2.5 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium text-slate-800">{formatDate(h.date, locale)}</div>
+                      <div className="text-xs text-slate-400">
+                        {h.type ? `${(t as any)[h.type] ?? h.type} · ` : ''}{h.prix_m2 != null ? formatPriceM2(h.prix_m2, locale) : '—'}
+                      </div>
+                    </div>
+                    <div className="shrink-0 pl-3 font-semibold text-slate-700">{formatEUR(h.prix, locale)}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Comparables */}
           {comps.length > 0 && (
             <section>
@@ -142,6 +210,27 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
           )}
 
           <p className="pt-2 text-[11px] text-slate-300">{t.dataSource}</p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 border-t border-slate-100 bg-white px-5 py-3">
+          <button
+            onClick={analyze}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M3 17l5-5 4 4 8-8M21 8h-4M21 8v4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {t.analyzeAddress}
+          </button>
+          {sale.code_commune && (
+            <button
+              onClick={() => router.push(`/commune/${sale.code_commune}`)}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              {t.viewCity}
+            </button>
+          )}
         </div>
       </aside>
     </>
