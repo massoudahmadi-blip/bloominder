@@ -194,18 +194,24 @@ def split(a: argparse.Namespace) -> None:
 
 
 def slim(a: argparse.Namespace) -> None:
+    # --with-type appends a precision column from BAN's result_type: an exact
+    # housenumber/street is 'address'; a locality/municipality (rural lieu-dit
+    # with no street number) is only 'locality' — a hamlet/town centroid, not a
+    # precise point — so it can be ranked below a cadastral-parcel placement.
+    PREC = {"housenumber": "address", "street": "address"}
     with open(a.geocoded, encoding="utf-8", errors="replace", newline="") as f, \
          open(a.out, "w", encoding="utf-8", newline="") as o:
         reader = csv.DictReader(f)
         w = csv.writer(o)
-        w.writerow(["addr_key", "lat", "lon", "score"])
+        w.writerow(["addr_key", "lat", "lon", "score"] + (["prec"] if a.with_type else []))
         for row in reader:
             lat, lon, sc = row.get("latitude") or "", row.get("longitude") or "", row.get("result_score") or ""
             try:
                 ok = bool(sc) and float(sc) >= 0.4 and lat and lon
             except ValueError:
                 ok = False
-            w.writerow([row.get("addr_key"), lat if ok else "", lon if ok else "", sc])
+            extra = [PREC.get((row.get("result_type") or "").strip(), "locality")] if a.with_type else []
+            w.writerow([row.get("addr_key"), lat if ok else "", lon if ok else "", sc] + extra)
 
 
 def main() -> None:
@@ -229,7 +235,8 @@ def main() -> None:
     ps = sub.add_parser("slim")
     ps.add_argument("--geocoded", required=True)
     ps.add_argument("--out", required=True)
-    ps.set_defaults(func=slim)
+    ps.add_argument("--with-type", action="store_true", dest="with_type")
+    ps.set_defaults(func=slim, with_type=False)
 
     args = p.parse_args()
     args.func(args)

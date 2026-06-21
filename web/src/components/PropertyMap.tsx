@@ -384,7 +384,7 @@ export function PropertyMap({
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
                   {hovered.id_parcelle && <span>{t.parcelLabel}: <b className="font-mono text-slate-700">{hovered.id_parcelle}</b></span>}
                   {hovered.nombre_lots ? <span>{hovered.nombre_lots} {t.lotsLabel}</span> : null}
-                  {hovered.geo_precision === 'commune' && <span className="text-amber-600">{t.precApprox}</span>}
+                  {(hovered.geo_precision === 'commune' || hovered.geo_precision === 'locality') && <span className="text-amber-600">{t.precApprox}</span>}
                 </div>
               )}
 

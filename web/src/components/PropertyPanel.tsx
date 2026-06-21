@@ -121,7 +121,7 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-slate-100 px-4 py-2.5 text-xs text-slate-500">
               {sale.id_parcelle && <span>{t.parcelLabel}: <b className="font-mono text-slate-700">{sale.id_parcelle}</b></span>}
               {sale.nombre_lots ? <span>{sale.nombre_lots} {t.lotsLabel}</span> : null}
-              {sale.geo_precision === 'commune' && <span className="text-amber-600">{t.precApprox}</span>}
+              {(sale.geo_precision === 'commune' || sale.geo_precision === 'locality') && <span className="text-amber-600">{t.precApprox}</span>}
             </div>
           )}
 

@@ -17,7 +17,7 @@ DB="${POSTGRES_DB:-bloominder}"; USR="${POSTGRES_USER:-bloominder}"
 BAN="https://api-adresse.data.gouv.fr/search/csv/"
 psql() { docker compose -f "$HERE/docker-compose.yml" exec -T db psql -v ON_ERROR_STOP=1 -U "$USR" -d "$DB" "$@"; }
 
-psql -c "CREATE TABLE IF NOT EXISTS stg_ban(addr_key text, lat double precision, lon double precision, score double precision);" >/dev/null
+psql -c "DROP TABLE IF EXISTS stg_ban; CREATE TABLE stg_ban(addr_key text, lat double precision, lon double precision, score double precision, prec text);" >/dev/null
 
 if [ "$#" -gt 0 ]; then
   DEPTS=("$@")
@@ -48,20 +48,23 @@ for D in "${DEPTS[@]}"; do
         -F columns=q \
         -F postcode=code_postal \
         -F citycode=citycode \
-        -F result_columns=latitude -F result_columns=longitude -F result_columns=result_score \
+        -F result_columns=latitude -F result_columns=longitude -F result_columns=result_score -F result_columns=result_type \
         "$BAN" -o "$geo"; then
     echo "   dept $D: BAN request failed, skip"; continue
   fi
 
-  # 3) keep good matches (score >= 0.4) → addr_key,lat,lon,score
-  python3 "$HERE/raw/dvf_raw.py" slim --geocoded "$geo" --out "$slim" || { echo "   dept $D: slim fail"; continue; }
+  # 3) keep good matches (score >= 0.4) → addr_key,lat,lon,score,prec
+  #    prec='address' for an exact housenumber/street, 'locality' for a lieu-dit
+  #    / town centroid (precise enough to map, but flagged as approximate).
+  python3 "$HERE/raw/dvf_raw.py" slim --with-type --geocoded "$geo" --out "$slim" || { echo "   dept $D: slim fail"; continue; }
 
   # 4) join back and place (never overwrite an already-located row)
   psql -c "TRUNCATE stg_ban;" >/dev/null
   psql -c "\copy stg_ban FROM '/data/ban/geoslim_$D.csv' CSV HEADER" >/dev/null
   upd=$(psql -tAc "WITH up AS (
            UPDATE transactions t SET longitude=s.lon, latitude=s.lat,
-                  geom=ST_SetSRID(ST_MakePoint(s.lon,s.lat),4326), geo_precision='address'
+                  geom=ST_SetSRID(ST_MakePoint(s.lon,s.lat),4326),
+                  geo_precision=coalesce(s.prec,'address')
            FROM stg_ban s
            WHERE t.code_departement='$D' AND t.geom IS NULL
              AND s.lon IS NOT NULL AND s.lat IS NOT NULL
