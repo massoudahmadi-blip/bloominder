@@ -25,21 +25,30 @@ psql() { docker compose -f "$HERE/docker-compose.yml" exec -T db psql -v ON_ERRO
 echo ">> Ensuring investor schema..."
 psql < "$HERE/invest_schema.sql" >/dev/null
 
-echo ">> Correcting €/m² to mutation level (multi-lot dedup)..."
+echo ">> Correcting €/m² to mutation level (Carrez-aware, single-type only)..."
 psql >/dev/null <<'SQL'
 SET work_mem = '256MB';
+-- A DVF "mutation" (one sale) can span several lots/parcels that repeat the full
+-- price. €/m² is only meaningful on the habitable area of a SINGLE dwelling type,
+-- using the legal Carrez surface for flats (more accurate than surface_bati) and
+-- falling back to surface_bati. Reset, then set €/m² only on those clean rows;
+-- dépendances/terrains and mixed maison+appartement sales stay NULL.
+UPDATE transactions SET prix_m2 = NULL WHERE prix_m2 IS NOT NULL;
 UPDATE transactions t SET prix_m2 = q.pm2
 FROM (
   SELECT code_commune, date_mutation, valeur_fonciere,
-         round(valeur_fonciere / sum(surface_bati)) AS pm2
+         round(valeur_fonciere
+               / sum(coalesce(NULLIF(surface_carrez,0), surface_bati))) AS pm2
   FROM transactions
-  WHERE valeur_fonciere > 0 AND surface_bati IS NOT NULL
+  WHERE valeur_fonciere > 0 AND type_local IN ('Maison','Appartement')
+        AND coalesce(NULLIF(surface_carrez,0), surface_bati) IS NOT NULL
   GROUP BY code_commune, date_mutation, valeur_fonciere
-  HAVING sum(surface_bati) > 5
+  HAVING sum(coalesce(NULLIF(surface_carrez,0), surface_bati)) > 8
+     AND count(DISTINCT type_local) FILTER (WHERE type_local IN ('Maison','Appartement')) = 1
 ) q
 WHERE t.code_commune = q.code_commune AND t.date_mutation = q.date_mutation
-  AND t.valeur_fonciere = q.valeur_fonciere AND t.surface_bati IS NOT NULL
-  AND t.prix_m2 IS DISTINCT FROM q.pm2;
+  AND t.valeur_fonciere = q.valeur_fonciere
+  AND t.type_local IN ('Maison','Appartement');
 SQL
 
 echo ">> Computing commune_metrics (mutation-level median €/m², 3y growth, gross yield)..."
@@ -53,8 +62,15 @@ mut AS (
     max(nom_commune)      AS nom_commune,
     max(code_departement) AS code_departement,
     max(code_postal)      AS code_postal,
-    (array_agg(type_local ORDER BY surface_bati DESC NULLS LAST))[1] AS type_local,
-    CASE WHEN sum(surface_bati) > 5 THEN valeur_fonciere / sum(surface_bati) END AS prix_m2
+    (array_agg(type_local ORDER BY coalesce(NULLIF(surface_carrez,0),surface_bati) DESC NULLS LAST))[1] AS type_local,
+    -- mutation €/m²: Carrez-preferred habitable area, single dwelling type only
+    CASE WHEN sum(CASE WHEN type_local IN ('Maison','Appartement')
+                       THEN coalesce(NULLIF(surface_carrez,0),surface_bati) END) > 8
+          AND count(DISTINCT type_local) FILTER (WHERE type_local IN ('Maison','Appartement')) = 1
+         THEN valeur_fonciere
+              / sum(CASE WHEN type_local IN ('Maison','Appartement')
+                         THEN coalesce(NULLIF(surface_carrez,0),surface_bati) END)
+    END AS prix_m2
   FROM transactions
   WHERE nature_mutation = 'Vente' AND valeur_fonciere > 0
   GROUP BY code_commune, date_mutation, valeur_fonciere
