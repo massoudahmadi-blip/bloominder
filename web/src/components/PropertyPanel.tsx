@@ -158,6 +158,13 @@ export function PropertyPanel({ sale, onClose }: { sale: Sale | null; onClose: (
                 {mutation.parcels.length > 0 && (
                   <div className="mt-1.5 truncate font-mono text-[10px] text-slate-400">{mutation.parcels.join(' · ')}</div>
                 )}
+                {mutation.built_total != null && mutation.built_total > 0 && (
+                  <div className="mt-2 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
+                    <span className="text-slate-400">{t.cadBuildings}: </span>
+                    {(mutation.buildings ?? []).flatMap((b) => b.footprints).sort((a, z) => z - a).map((f) => formatM2(f)).join(' · ')}
+                    <span className="text-slate-400"> ({t.cadAuSol})</span>
+                  </div>
+                )}
               </div>
             </section>
           )}

@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { query } from '../db';
+import { buildingsForParcels } from '../cadastre';
 
 // Property detail + comparables — powers the address detail page.
 export async function propertyRoutes(app: FastifyInstance) {
@@ -71,6 +72,15 @@ export async function propertyRoutes(app: FastifyInstance) {
     const habBati = composition.filter((c) => c.type === 'Maison' || c.type === 'Appartement')
       .reduce((s, c) => s + (c.surface_carrez > 0 ? c.surface_carrez : c.surface_bati), 0);
 
+    // Cadastre building footprints for the sale's parcels — fills the gap DVF
+    // leaves for dépendances/annexes (no surface in DVF).
+    let buildings: { id_parcelle: string; footprints: number[]; built_total: number }[] = [];
+    let built_total = 0;
+    try {
+      buildings = await buildingsForParcels(code, [...parcels]);
+      built_total = buildings.reduce((s, b) => s + b.built_total, 0);
+    } catch { /* cadastre unavailable — skip enrichment */ }
+
     return {
       valeur, date, code_commune: code,
       n_lines: lines.length,
@@ -79,8 +89,19 @@ export async function propertyRoutes(app: FastifyInstance) {
       surface_hab_total: habBati,
       prix_m2: habBati > 8 ? Math.round(valeur / habBati) : null,
       composition,
+      buildings,
+      built_total,
       lines,
     };
+  });
+
+  // GET /api/buildings?insee=13105&parcels=13105000BM0016,13105000BM0027
+  // Cadastre building footprints (m²) for the given parcels.
+  app.get('/buildings', async (req, reply) => {
+    const { insee, parcels } = req.query as { insee?: string; parcels?: string };
+    if (!insee || !parcels) return reply.code(400).send({ error: 'insee and parcels required' });
+    const ids = parcels.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 20);
+    return { buildings: await buildingsForParcels(insee, ids) };
   });
 
   // GET /api/parcel/:idParcelle  — full sale history for a cadastral parcel

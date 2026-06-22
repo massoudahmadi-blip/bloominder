@@ -86,11 +86,14 @@ export interface MutationPart {
   type: string; count: number;
   surface_bati: number; surface_carrez: number; surface_terrain: number; pieces: number;
 }
+export interface ParcelBuildings { id_parcelle: string; footprints: number[]; built_total: number }
 export interface Mutation {
   valeur: number; date: string; code_commune: string;
   n_lines: number; parcels: string[];
   surface_terrain_total: number; surface_hab_total: number; prix_m2: number | null;
   composition: MutationPart[];
+  buildings?: ParcelBuildings[];
+  built_total?: number;
 }
 
 // Full composition of one sale (every lot/parcel/local it bundled), grouped by
