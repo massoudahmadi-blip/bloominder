@@ -126,6 +126,14 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Urbanisme 
   return res.json();
 }
 
+// PLU zones (GeoJSON) inside a viewport — the map overlay layer.
+export async function getPluZones(minLon: number, minLat: number, maxLon: number, maxLat: number): Promise<any | null> {
+  if (USING_MOCK) return null;
+  const res = await fetch(`${API}/api/urbanisme/zones?bbox=${minLon},${minLat},${maxLon},${maxLat}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Full recorded sale history of one cadastral parcel (most accurate "this exact
 // property" history — independent of the comparables recency window).
 export async function getParcelHistory(idParcelle: string): Promise<Sale[]> {

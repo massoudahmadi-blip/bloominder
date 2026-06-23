@@ -16,6 +16,7 @@ import type { GeoJSONSource } from 'maplibre-gl';
 import { Sale, BBox } from '@/lib/types';
 import { priceM2Color, formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { fetchParcelAt } from '@/lib/cadastre';
+import { getPluZones } from '@/lib/api';
 import { useBrandColor } from '@/lib/useBrandColor';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
@@ -82,6 +83,28 @@ interface ClusterMarker {
   lat: number;
 }
 
+// PLU zone families → colour (matches the address-report legend).
+const PLU_COLORS = ['match', ['get', 'family'],
+  'urbaine', '#3b82f6',
+  'a_urbaniser', '#f59e0b',
+  'agricole', '#65a30d',
+  'naturelle', '#10b981',
+  /* other */ '#94a3b8'] as any;
+const PLU_LEGEND: [string, string][] = [
+  ['urbaine', '#3b82f6'], ['a_urbaniser', '#f59e0b'], ['agricole', '#65a30d'], ['naturelle', '#10b981'],
+];
+
+function polyCentroid(geom: any): [number, number] | null {
+  let ring: number[][] | null = null;
+  if (geom?.type === 'Polygon') ring = geom.coordinates[0];
+  else if (geom?.type === 'MultiPolygon') ring = geom.coordinates.reduce(
+    (best: number[][] | null, p: number[][][]) => (!best || p[0].length > best.length ? p[0] : best), null);
+  if (!ring?.length) return null;
+  let x = 0, y = 0;
+  for (const c of ring) { x += c[0]; y += c[1]; }
+  return [x / ring.length, y / ring.length];
+}
+
 export function PropertyMap({
   sales,
   serverClusters = [],
@@ -112,6 +135,9 @@ export function PropertyMap({
     : clusters;
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
+  const [plu, setPlu] = useState(false);
+  const [pluData, setPluData] = useState<any | null>(null);
+  const [pluZoomLow, setPluZoomLow] = useState(false);
   const [hovered, setHovered] = useState<Sale | null>(null);
   const [parcel, setParcel] = useState<any | null>(null);
   const overCard = useRef(false);
@@ -150,6 +176,30 @@ export function PropertyMap({
       maxLat: b.getNorth(),
     });
   }, [onViewChange]);
+
+  // PLU zones overlay: fetch the viewport's zones once zoomed into parcel level.
+  const fetchPlu = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    if (map.getZoom() < 14) { setPluZoomLow(true); setPluData(null); return; }
+    setPluZoomLow(false);
+    const b = map.getBounds();
+    getPluZones(b.getWest(), b.getSouth(), b.getEast(), b.getNorth())
+      .then((fc) => setPluData(fc)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (plu) fetchPlu(); else { setPluData(null); setPluZoomLow(false); }
+  }, [plu, fetchPlu]);
+
+  const pluLabels = useMemo(() => {
+    if (!pluData?.features) return [] as { lon: number; lat: number; label: string; color: string }[];
+    return pluData.features.slice(0, 40).map((f: any) => {
+      const c = polyCentroid(f.geometry);
+      const fam = PLU_LEGEND.find(([k]) => k === f.properties?.family);
+      return c ? { lon: c[0], lat: c[1], label: f.properties?.libelle || f.properties?.typezone || '', color: fam ? fam[1] : '#64748b' } : null;
+    }).filter(Boolean) as { lon: number; lat: number; label: string; color: string }[];
+  }, [pluData]);
 
   const refreshClusters = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -275,7 +325,7 @@ export function PropertyMap({
         interactiveLayerIds={['unclustered-point']}
         cursor={cursor}
         onLoad={handleLoad}
-        onMoveEnd={emitBounds}
+        onMoveEnd={() => { emitBounds(); if (plu) fetchPlu(); }}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => {
@@ -302,6 +352,19 @@ export function PropertyMap({
             <Layer id="cadastre-lyr" type="raster" paint={{ 'raster-opacity': 0.7 }} beforeId="unclustered-point" />
           </Source>
         )}
+
+        {/* PLU zoning overlay (Géoportail de l'Urbanisme), toggleable */}
+        {plu && pluData && (
+          <Source id="plu" type="geojson" data={pluData}>
+            <Layer id="plu-fill" type="fill" paint={{ 'fill-color': PLU_COLORS, 'fill-opacity': 0.25 }} beforeId="unclustered-point" />
+            <Layer id="plu-line" type="line" paint={{ 'line-color': PLU_COLORS, 'line-width': 1, 'line-opacity': 0.7 }} beforeId="unclustered-point" />
+          </Source>
+        )}
+        {plu && pluLabels.map((l, i) => (
+          <Marker key={`plu-${i}`} longitude={l.lon} latitude={l.lat} anchor="center">
+            <span className="pointer-events-none rounded px-1 text-[10px] font-bold text-white shadow-sm" style={{ background: l.color }}>{l.label}</span>
+          </Marker>
+        ))}
 
         {/* Highlighted parcel under a searched address */}
         {parcel && (
@@ -419,6 +482,35 @@ export function PropertyMap({
         </svg>
         {t.parcels}
       </button>
+
+      {/* PLU zoning toggle */}
+      <button
+        onClick={() => setPlu((p) => !p)}
+        className={`absolute left-3 top-28 z-10 flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium shadow-panel transition ${plu ? 'bg-brand-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+      >
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        {t.pluLayer}
+      </button>
+
+      {/* PLU legend + zoom hint */}
+      {plu && (
+        <div className="absolute left-3 top-40 z-10 rounded-xl bg-white/95 px-3 py-2 text-[11px] shadow-panel backdrop-blur">
+          {pluZoomLow ? (
+            <span className="text-slate-500">{t.pluZoomIn}</span>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {PLU_LEGEND.map(([k, c]) => (
+                <span key={k} className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: c }} />
+                  <span className="text-slate-600">{(t as any)[`urba${k === 'a_urbaniser' ? 'AUrbaniser' : k.charAt(0).toUpperCase() + k.slice(1)}`] ?? k}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Parcel info chip for a searched address */}
       {parcel && (

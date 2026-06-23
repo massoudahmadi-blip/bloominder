@@ -11,13 +11,15 @@ const Query = z.object({ lon: z.coerce.number(), lat: z.coerce.number() });
 // Light cache keyed by rounded coordinates (zones are large polygons).
 const cache = new Map<string, Promise<any>>();
 
-async function gpu(endpoint: string, lon: number, lat: number): Promise<any[]> {
-  const geom = JSON.stringify({ type: 'Point', coordinates: [lon, lat] });
-  const url = `${GPU}/${endpoint}?geom=${encodeURIComponent(geom)}`;
+async function gpuGeom(endpoint: string, geom: object): Promise<any[]> {
+  const url = `${GPU}/${endpoint}?geom=${encodeURIComponent(JSON.stringify(geom))}`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data: any = await res.json().catch(() => null);
   return (data && data.features) ? data.features : [];
+}
+async function gpu(endpoint: string, lon: number, lat: number): Promise<any[]> {
+  return gpuGeom(endpoint, { type: 'Point', coordinates: [lon, lat] });
 }
 
 // Plain-language family from the PLU zone type.
@@ -30,7 +32,39 @@ function family(typezone: string | null): string {
   return 'autre';
 }
 
+// In-memory cache for viewport zone queries (keyed by rounded bbox).
+const bboxCache = new Map<string, Promise<any>>();
+
 export async function urbanismeRoutes(app: FastifyInstance) {
+  // GET /api/urbanisme/zones?bbox=minLon,minLat,maxLon,maxLat
+  // PLU zones (GeoJSON) intersecting the viewport — the map overlay layer.
+  app.get('/urbanisme/zones', async (req, reply) => {
+    const box = String((req.query as any).bbox || '').split(',').map(Number);
+    if (box.length !== 4 || box.some(Number.isNaN)) return reply.code(400).send({ error: 'bbox required' });
+    const [a, b, c, d] = box;
+    const key = box.map((n) => n.toFixed(3)).join(',');
+    let p = bboxCache.get(key);
+    if (!p) {
+      const geom = { type: 'Polygon', coordinates: [[[a, b], [c, b], [c, d], [a, d], [a, b]]] };
+      p = gpuGeom('zone-urba', geom).then((feats) => ({
+        type: 'FeatureCollection',
+        features: feats.slice(0, 800).map((f: any) => ({
+          type: 'Feature',
+          geometry: f.geometry,
+          properties: {
+            typezone: f.properties?.typezone ?? null,
+            family: family(f.properties?.typezone),
+            libelle: f.properties?.libelle ?? null,
+            libelong: f.properties?.libelong ?? null,
+          },
+        })),
+      })).catch(() => ({ type: 'FeatureCollection', features: [] }));
+      bboxCache.set(key, p);
+      if (bboxCache.size > 300) bboxCache.delete(bboxCache.keys().next().value as string);
+    }
+    return p;
+  });
+
   app.get('/urbanisme', async (req, reply) => {
     const parsed = Query.safeParse(req.query);
     if (!parsed.success) return reply.code(400).send({ error: 'lon and lat required' });
