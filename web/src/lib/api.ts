@@ -105,6 +105,27 @@ export async function getMutation(code: string, date: string, valeur: number): P
   return res.json();
 }
 
+export interface UrbaZone {
+  typezone: string | null; family: string; libelle: string | null; libelong: string | null;
+  partition: string | null; insee: string | null;
+  reglement_file: string | null; reglement_url: string | null; date: string | null;
+}
+export interface Urbanisme {
+  point: { lon: number; lat: number };
+  has_document: boolean;
+  zones: UrbaZone[];
+  prescriptions: { libelle: string | null; typepsc: string | null; txt: string | null }[];
+  gpu_url: string;
+}
+
+// PLU zoning at a point (Géoportail de l'Urbanisme via apicarto GPU).
+export async function getUrbanisme(lon: number, lat: number): Promise<Urbanisme | null> {
+  if (USING_MOCK || !lon || !lat) return null;
+  const res = await fetch(`${API}/api/urbanisme?lon=${lon}&lat=${lat}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // Full recorded sale history of one cadastral parcel (most accurate "this exact
 // property" history — independent of the comparables recency window).
 export async function getParcelHistory(idParcelle: string): Promise<Sale[]> {

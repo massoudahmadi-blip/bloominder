@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getComparables, getCommune, getRentControl, RentControl } from '@/lib/api';
+import { getComparables, getCommune, getRentControl, RentControl, getUrbanisme, Urbanisme } from '@/lib/api';
 import { Sale, CommuneProfile } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2, priceM2Color } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
@@ -23,6 +23,15 @@ const ENERGY_COLORS: Record<string, string> = {
   A: '#319a3b', B: '#5fb84f', C: '#a8d04a', D: '#fde64b', E: '#fbb33d', F: '#ee732f', G: '#e30613',
 };
 
+// PLU zone families → colour + i18n key.
+const URBA_FAM: Record<string, { color: string; key: string }> = {
+  urbaine: { color: '#3b82f6', key: 'urbaUrbaine' },
+  a_urbaniser: { color: '#f59e0b', key: 'urbaAUrbaniser' },
+  agricole: { color: '#65a30d', key: 'urbaAgricole' },
+  naturelle: { color: '#10b981', key: 'urbaNaturelle' },
+  autre: { color: '#94a3b8', key: 'urbaAutre' },
+};
+
 interface Seed {
   lat: number; lon: number; label: string; citycode?: string;
   surface?: number; terrain?: number; type?: string; prix?: number;
@@ -42,6 +51,7 @@ export default function AdressePage() {
   const [city, setCity] = useState<CommuneProfile | null>(null);
   const [parcel, setParcel] = useState<ParcelFeature | null>(null);
   const [rentCtl, setRentCtl] = useState<RentControl | null>(null);
+  const [urba, setUrba] = useState<Urbanisme | null>(null);
   usePageTitle(seed?.label ?? t.addressReport);
 
   useEffect(() => {
@@ -68,6 +78,7 @@ export default function AdressePage() {
     if (seed.citycode) getCommune(seed.citycode).then(setCity).catch(() => {});
     fetchParcelAt(seed.lon, seed.lat).then(setParcel).catch(() => {});
     getRentControl(seed.lat, seed.lon, seed.pieces ?? null, false).then(setRentCtl).catch(() => {});
+    getUrbanisme(seed.lon, seed.lat).then(setUrba).catch(() => {});
   }, [seed]);
 
   // Robust comparables-based estimate for the property's living area.
@@ -233,6 +244,50 @@ export default function AdressePage() {
                   <p className="mt-2 inline-block rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">{t.rcOver}</p>
                 )}
               </div>
+            )}
+
+            {/* Urbanisme — PLU zoning (Géoportail de l'Urbanisme) */}
+            {urba && (urba.zones.length > 0 || urba.prescriptions.length > 0) && (
+              <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.urbaTitle}</h2>
+                {urba.zones.map((z, i) => {
+                  const fam = URBA_FAM[z.family] ?? URBA_FAM.autre;
+                  return (
+                    <div key={i} className="mb-3 last:mb-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md px-2 py-1 text-xs font-bold text-white" style={{ background: fam.color }}>
+                          {z.libelle || z.typezone || '—'}
+                        </span>
+                        <span className="text-sm font-medium text-slate-700">{(t as any)[fam.key] ?? z.family}</span>
+                      </div>
+                      {z.libelong && <p className="mt-1.5 text-sm leading-snug text-slate-600">{z.libelong}</p>}
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-slate-400">
+                        {z.partition && <span>{z.partition}</span>}
+                        {z.reglement_file && <span>{t.urbaReglement}: {z.reglement_file}</span>}
+                        {z.date && <span>{z.date}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+                {urba.prescriptions.length > 0 && (
+                  <div className="mt-3 border-t border-slate-100 pt-3">
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t.urbaPrescriptions}</p>
+                    <ul className="space-y-0.5 text-sm text-slate-600">
+                      {urba.prescriptions.slice(0, 6).map((p, i) => (
+                        <li key={i} className="flex items-start gap-1.5">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
+                          {p.libelle || p.txt}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <a href={urba.gpu_url} target="_blank" rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+                  {t.urbaGpuLink}
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </a>
+              </section>
             )}
 
             {/* Risk scorecard */}
