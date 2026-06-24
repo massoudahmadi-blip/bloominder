@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getComparables, getCommune, getRentControl, RentControl, getUrbanisme, Urbanisme } from '@/lib/api';
+import { getComparables, getCommune, getRentControl, RentControl, getUrbanisme, Urbanisme, getCommuneRisks, CommuneRisks } from '@/lib/api';
 import { Sale, CommuneProfile } from '@/lib/types';
 import { formatEUR, formatM2, formatDate, formatPriceM2, priceM2Color } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
@@ -52,6 +52,7 @@ export default function AdressePage() {
   const [parcel, setParcel] = useState<ParcelFeature | null>(null);
   const [rentCtl, setRentCtl] = useState<RentControl | null>(null);
   const [urba, setUrba] = useState<Urbanisme | null>(null);
+  const [risks, setRisks] = useState<CommuneRisks | null>(null);
   usePageTitle(seed?.label ?? t.addressReport);
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function AdressePage() {
     fetchParcelAt(seed.lon, seed.lat).then(setParcel).catch(() => {});
     getRentControl(seed.lat, seed.lon, seed.pieces ?? null, false).then(setRentCtl).catch(() => {});
     getUrbanisme(seed.lon, seed.lat).then(setUrba).catch(() => {});
+    if (seed.citycode) getCommuneRisks(seed.citycode).then(setRisks).catch(() => {});
   }, [seed]);
 
   // Robust comparables-based estimate for the property's living area.
@@ -287,6 +289,24 @@ export default function AdressePage() {
                   {t.urbaGpuLink}
                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M7 17 17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </a>
+              </section>
+            )}
+
+            {/* État des risques (Géorisques) */}
+            {risks && risks.risks.length > 0 && (
+              <section className="report-card mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t.risksGeoTitle}</h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {risks.risks.map((r, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />{r.libelle}
+                    </span>
+                  ))}
+                </div>
+                {risks.seismic_zone && (
+                  <p className="mt-2 text-xs text-slate-500">{t.risksSeismic}: <b className="text-slate-700">{risks.seismic_zone}</b></p>
+                )}
+                <p className="mt-2 text-[11px] text-slate-400">{t.risksGeoNote}</p>
               </section>
             )}
 

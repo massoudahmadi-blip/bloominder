@@ -16,6 +16,7 @@ import type { GeoJSONSource } from 'maplibre-gl';
 import { Sale, BBox } from '@/lib/types';
 import { priceM2Color, formatEUR, formatPriceM2, formatM2, formatDate } from '@/lib/format';
 import { fetchParcelAt } from '@/lib/cadastre';
+import { getPluZones } from '@/lib/api';
 import { useBrandColor } from '@/lib/useBrandColor';
 import { useI18n } from '@/lib/i18n';
 import { Legend } from './Legend';
@@ -82,15 +83,37 @@ interface ClusterMarker {
   lat: number;
 }
 
-// Official WMS overlays (server-tiled rasters — light, with official styling).
-// PLU zoning: Géoportail de l'Urbanisme (zone_secteur). Flood: Géorisques TRI
-// aléa inondation (débordement + submersion marine, 3 intensities each).
-const PLU_WMS = 'https://data.geopf.fr/wms-v/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=zone_secteur&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}';
-const FLOOD_LAYERS = [
-  'ALEA_SYNT_01_04FAI_FXX', 'ALEA_SYNT_01_02MOY_FXX', 'ALEA_SYNT_01_01FOR_FXX',
-  'ALEA_SYNT_03_04FAI_FXX', 'ALEA_SYNT_03_02MOY_FXX', 'ALEA_SYNT_03_01FOR_FXX',
-].join(',');
-const FLOOD_WMS = `https://www.georisques.gouv.fr/services?language=fre&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${FLOOD_LAYERS}&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`;
+// PLU zones → our own vivid colours by family (data-driven), for readability.
+const PLU_COLOR = ['match', ['get', 'family'],
+  'urbaine', '#e11d48',
+  'a_urbaniser', '#f59e0b',
+  'agricole', '#ca8a04',
+  'naturelle', '#16a34a',
+  '#94a3b8'] as any;
+const PLU_LEGEND: [string, string][] = [
+  ['urbaine', '#e11d48'], ['a_urbaniser', '#f59e0b'], ['agricole', '#ca8a04'], ['naturelle', '#16a34a'],
+];
+function pluCentroid(geom: any): [number, number] | null {
+  let ring: number[][] | null = null;
+  if (geom?.type === 'Polygon') ring = geom.coordinates[0];
+  else if (geom?.type === 'MultiPolygon') ring = geom.coordinates.reduce(
+    (best: number[][] | null, p: number[][][]) => (!best || p[0].length > best.length ? p[0] : best), null);
+  if (!ring?.length) return null;
+  let x = 0, y = 0;
+  for (const c of ring) { x += c[0]; y += c[1]; }
+  return [x / ring.length, y / ring.length];
+}
+
+// Flood is too heavy for vector (TRI polygons ~0.5 MB each) → WMS raster from
+// Géorisques. Sub-filter: PPRi (regulatory) and/or aléa TRI (by intensity).
+const FLOOD_ALEA = ['ALEA_SYNT_01_04FAI_FXX', 'ALEA_SYNT_01_02MOY_FXX', 'ALEA_SYNT_01_01FOR_FXX',
+  'ALEA_SYNT_03_04FAI_FXX', 'ALEA_SYNT_03_02MOY_FXX', 'ALEA_SYNT_03_01FOR_FXX'];
+const FLOOD_PPRI = ['PPRN_PERIMETRE_INOND', 'PPRN_ZONE_INOND'];
+function floodWms(kind: 'ppri' | 'alea' | 'both'): string {
+  const layers = kind === 'ppri' ? FLOOD_PPRI : kind === 'alea' ? FLOOD_ALEA : [...FLOOD_ALEA, ...FLOOD_PPRI];
+  return `https://www.georisques.gouv.fr/services?language=fre&SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${layers.join(',')}&STYLES=&FORMAT=image/png&TRANSPARENT=true&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`;
+}
+const FLOOD_LEGEND: [string, string][] = [['fort', '#08519c'], ['moyen', '#4292c6'], ['faible', '#c6dbef']];
 
 export function PropertyMap({
   sales,
@@ -123,7 +146,11 @@ export function PropertyMap({
   const [cursor, setCursor] = useState<string>('grab');
   const [parcels, setParcels] = useState(false);
   const [plu, setPlu] = useState(false);
+  const [pluData, setPluData] = useState<any | null>(null);
+  const [pluLowZoom, setPluLowZoom] = useState(false);
+  const [zoneInfo, setZoneInfo] = useState<{ lon: number; lat: number; libelle: string; libelong: string } | null>(null);
   const [flood, setFlood] = useState(false);
+  const [floodKind, setFloodKind] = useState<'ppri' | 'alea' | 'both'>('both');
   const [hovered, setHovered] = useState<Sale | null>(null);
   const [parcel, setParcel] = useState<any | null>(null);
   const overCard = useRef(false);
@@ -162,6 +189,29 @@ export function PropertyMap({
       maxLat: b.getNorth(),
     });
   }, [onViewChange]);
+
+  // PLU vector overlay — fetched per viewport once zoomed to parcel level.
+  const fetchPlu = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    if (map.getZoom() < 15) { setPluLowZoom(true); setPluData(null); return; }
+    setPluLowZoom(false);
+    const b = map.getBounds();
+    getPluZones(b.getWest(), b.getSouth(), b.getEast(), b.getNorth())
+      .then((fc) => setPluData(fc)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (plu) fetchPlu(); else { setPluData(null); setPluLowZoom(false); setZoneInfo(null); }
+  }, [plu, fetchPlu]);
+
+  const pluLabels = useMemo(() => {
+    if (!plu || !pluData?.features) return [] as { lon: number; lat: number; label: string }[];
+    return pluData.features.slice(0, 60).map((f: any) => {
+      const c = pluCentroid(f.geometry);
+      return c ? { lon: c[0], lat: c[1], label: f.properties?.libelle || f.properties?.typezone || '' } : null;
+    }).filter(Boolean) as { lon: number; lat: number; label: string }[];
+  }, [plu, pluData]);
 
   const refreshClusters = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -202,9 +252,16 @@ export function PropertyMap({
   }, [focus]);
 
   const handleClick = (e: MapLayerMouseEvent) => {
-    const feat = e.features?.[0];
+    // A sale dot wins over a PLU zone underneath it.
+    const feat = e.features?.find((f) => f.layer?.id === 'unclustered-point') ?? e.features?.[0];
+    if (feat && feat.layer?.id === 'plu-fill') {
+      const p = feat.properties as any;
+      setZoneInfo({ lon: e.lngLat.lng, lat: e.lngLat.lat, libelle: p.libelle || p.typezone || '', libelong: p.libelong || '' });
+      return;
+    }
     if (!feat) {
       onSelect(null);
+      setZoneInfo(null);
       return;
     }
     if ((feat.properties as any).point_count) {
@@ -284,10 +341,10 @@ export function PropertyMap({
         maxBounds={FRANCE_BOUNDS}
         minZoom={4.8}
         maxZoom={18}
-        interactiveLayerIds={['unclustered-point']}
+        interactiveLayerIds={plu ? ['unclustered-point', 'plu-fill'] : ['unclustered-point']}
         cursor={cursor}
         onLoad={handleLoad}
-        onMoveEnd={emitBounds}
+        onMoveEnd={() => { emitBounds(); if (plu) fetchPlu(); }}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => {
@@ -315,18 +372,33 @@ export function PropertyMap({
           </Source>
         )}
 
-        {/* PLU zoning overlay (Géoportail de l'Urbanisme WMS), toggleable */}
-        {plu && (
-          <Source id="plu" type="raster" tiles={[PLU_WMS]} tileSize={256} attribution="© Géoportail de l'Urbanisme">
-            <Layer id="plu-lyr" type="raster" paint={{ 'raster-opacity': 0.55 }} beforeId="unclustered-point" />
+        {/* Flood-risk overlay (Géorisques WMS — PPRi + aléa inondation TRI) */}
+        {flood && (
+          <Source id="flood" key={floodKind} type="raster" tiles={[floodWms(floodKind)]} tileSize={256} attribution="© Géorisques">
+            <Layer id="flood-lyr" type="raster" paint={{ 'raster-opacity': 0.7 }} beforeId="unclustered-point" />
           </Source>
         )}
 
-        {/* Flood-risk overlay (Géorisques — aléa inondation TRI), toggleable */}
-        {flood && (
-          <Source id="flood" type="raster" tiles={[FLOOD_WMS]} tileSize={256} attribution="© Géorisques">
-            <Layer id="flood-lyr" type="raster" paint={{ 'raster-opacity': 0.55 }} beforeId="unclustered-point" />
+        {/* PLU zoning overlay (vector, coloured by family, clickable) */}
+        {plu && pluData && (
+          <Source id="plu" type="geojson" data={pluData}>
+            <Layer id="plu-fill" type="fill" paint={{ 'fill-color': PLU_COLOR, 'fill-opacity': 0.35 }} beforeId="unclustered-point" />
+            <Layer id="plu-line" type="line" paint={{ 'line-color': PLU_COLOR, 'line-width': 1.2, 'line-opacity': 0.9 }} beforeId="unclustered-point" />
           </Source>
+        )}
+        {pluLabels.map((l, i) => (
+          <Marker key={`plu-${i}`} longitude={l.lon} latitude={l.lat} anchor="center">
+            <span className="pointer-events-none rounded bg-white/85 px-1 text-[10px] font-bold text-slate-800 shadow-sm">{l.label}</span>
+          </Marker>
+        ))}
+        {zoneInfo && (
+          <Popup longitude={zoneInfo.lon} latitude={zoneInfo.lat} anchor="bottom" offset={8}
+            closeButton onClose={() => setZoneInfo(null)} maxWidth="280px" className="bloom-popup">
+            <div className="w-64 p-2.5">
+              <div className="text-sm font-bold text-slate-900">{t.pluLayer} · {zoneInfo.libelle}</div>
+              {zoneInfo.libelong && <p className="mt-1 text-xs leading-snug text-slate-600">{zoneInfo.libelong}</p>}
+            </div>
+          </Popup>
         )}
 
         {/* Highlighted parcel under a searched address */}
@@ -468,11 +540,51 @@ export function PropertyMap({
         {t.floodLayer}
       </button>
 
-      {/* Overlay legend / source note */}
+      {/* Flood sub-filter (PPRi / aléa / both) */}
+      {flood && (
+        <div className="absolute left-3 top-52 z-10 flex items-center gap-0.5 rounded-full bg-white/95 p-0.5 text-[11px] shadow-panel backdrop-blur">
+          {([['ppri', t.floodPPRi], ['alea', t.floodAlea], ['both', t.floodBoth]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setFloodKind(k)}
+              className={`rounded-full px-2 py-1 font-medium transition ${floodKind === k ? 'bg-sky-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Legend */}
       {(plu || flood) && (
-        <div className="absolute left-3 top-52 z-10 max-w-[220px] rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-snug text-slate-500 shadow-panel backdrop-blur">
-          {plu && <div><b className="text-slate-700">PLU</b> — {t.pluLegendNote}</div>}
-          {flood && <div className={plu ? 'mt-1' : ''}><b className="text-slate-700">{t.floodLayer}</b> — {t.floodLegendNote}</div>}
+        <div className="absolute left-3 top-64 z-10 max-w-[240px] rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-snug shadow-panel backdrop-blur">
+          {plu && (
+            <div className="mb-1">
+              <div className="mb-1 font-semibold text-slate-700">PLU{pluLowZoom ? ` — ${t.pluZoomIn}` : ''}</div>
+              {!pluLowZoom && (
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                  {PLU_LEGEND.map(([k, c]) => (
+                    <span key={k} className="flex items-center gap-1 text-slate-600">
+                      <span className="h-2.5 w-2.5 rounded-sm" style={{ background: c }} />
+                      {(t as any)[`urba${k === 'a_urbaniser' ? 'AUrbaniser' : k.charAt(0).toUpperCase() + k.slice(1)}`] ?? k}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {flood && (
+            <div className={plu ? 'border-t border-slate-100 pt-1' : ''}>
+              <div className="mb-1 font-semibold text-slate-700">{t.floodLayer}</div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-slate-600">
+                {(floodKind === 'alea' || floodKind === 'both') && FLOOD_LEGEND.map(([k, c]) => (
+                  <span key={k} className="flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-sm" style={{ background: c }} />{(t as any)[`flood_${k}`] ?? k}
+                  </span>
+                ))}
+                {(floodKind === 'ppri' || floodKind === 'both') && (
+                  <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: '#d62728' }} />{t.floodPPRi}</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -126,6 +126,19 @@ export async function getUrbanisme(lon: number, lat: number): Promise<Urbanisme 
   return res.json();
 }
 
+export interface CommuneRisks {
+  code_insee: string;
+  risks: { code: string | null; libelle: string }[];
+  seismic_zone: string | null;
+}
+// Commune risk profile (Géorisques GASPAR) for the address report.
+export async function getCommuneRisks(codeInsee: string): Promise<CommuneRisks | null> {
+  if (USING_MOCK || !codeInsee) return null;
+  const res = await fetch(`${API}/api/risques/commune?code_insee=${encodeURIComponent(codeInsee)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // PLU zones (GeoJSON) inside a viewport — the map overlay layer.
 export async function getPluZones(minLon: number, minLat: number, maxLon: number, maxLat: number): Promise<any | null> {
   if (USING_MOCK) return null;

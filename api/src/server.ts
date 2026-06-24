@@ -13,6 +13,7 @@ import { metaRoutes } from './routes/meta';
 import { rentControlRoutes } from './routes/rentcontrol';
 import { choroplethRoutes } from './routes/choropleth';
 import { urbanismeRoutes } from './routes/urbanisme';
+import { risquesRoutes } from './routes/risques';
 
 const app = Fastify({ logger: true });
 
@@ -32,6 +33,7 @@ async function main() {
   await app.register(rentControlRoutes, { prefix: '/api' });
   await app.register(choroplethRoutes, { prefix: '/api' });
   await app.register(urbanismeRoutes, { prefix: '/api' });
+  await app.register(risquesRoutes, { prefix: '/api' });
 
   try {
     await app.listen({ port: config.port, host: '0.0.0.0' });
